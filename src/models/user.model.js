@@ -1,28 +1,39 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-  username:{
-    type:String,
-    required:true,
-    unique:true
+  username: {
+    type: String,
+    required: true,
+    unique: true
   },
-  email:{
-    type:String,
-    required:true,
-    unique:true
+  email: {
+    type: String,
+    required: true,
+    unique: true
   },
-  isEmailVerified:{
-    type:Boolean,
-    required:true,
-    default:true
+  isEmailVerified: {
+    type: Boolean,
+    required: true,
+    default: true
   },
-  password:{
-    type:String,
-    required:true
+  password: {
+    type: String,
+    required: true
   },
-  refreshToken:String,
-  accessToken:String
+  refreshToken: String,
+  accessToken: String,
+  security: { type: String }, // Add fields as needed for security
+  signUpMethod: { type: String },
+  referralCode: { type: String },
+  profileID: { type: Schema.Types.ObjectId, ref: 'Profile' },
+  addressID: { type: Schema.Types.ObjectId, ref: 'Address' },
+  userPreferencesID: { type: Schema.Types.ObjectId, ref: 'UserPreferences' },
+  activityIds: [{ type: Schema.Types.ObjectId, ref: 'ActivityCollection' }],
+  milestones: [{ type: Schema.Types.ObjectId, ref: 'UserMilestone' }]
 });
+
+
+
 
 //Generating Access and Refresh Token method
 
@@ -59,4 +70,4 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 const User = mongoose.model("user", userSchema);
 
-export {User};
+export { User };
