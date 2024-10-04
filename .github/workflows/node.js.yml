@@ -27,5 +27,10 @@ jobs:
     - run: npm ci
     - name: Share env to the Project
       run: sudo cp /home/ubuntu/backend-secrets/.env /home/ubuntu/backend/_work/amorr_server/amorr_server/
+    - name: Verify PM2 installation
+      run: |
+          echo "Checking PM2 installation"
+          which pm2 || { echo "PM2 not found"; exit 1; }
+          pm2 -v
     - name: Restart Production Deployment
       run: sudo pm2 restart Amorr-Backend
