@@ -9,7 +9,7 @@ const UserPreferencesSchema = new mongoose.Schema({
     min: { type: Number },
     max: { type: Number }
   },
-  location: { type: String } // You can modify as per your preference
+  location: { type: String } 
 });
 
 const UserPreferences = mongoose.model('UserPreferences', UserPreferencesSchema);

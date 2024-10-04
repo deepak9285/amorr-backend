@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
   },
   refreshToken: String,
   accessToken: String,
-  security: { type: String }, // Add fields as needed for security
+  security: { type: String }, 
   signUpMethod: { type: String },
   referralCode: { type: String },
   profileID: { type: Schema.Types.ObjectId, ref: 'Profile' },
