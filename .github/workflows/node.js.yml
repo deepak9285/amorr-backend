@@ -28,4 +28,4 @@ jobs:
     - name: Share env to the Project
       run: sudo cp /home/ubuntu/backend-secrets/.env /home/ubuntu/backend/_work/amorr_server/amorr_server/
     - name: Restart Production Deployment
-      run: sudo pm2 restart Amorr-Backend
+      run: sudo /home/ubuntu/.nvm/versions/node/v20.17.0/bin/pm2 restart Amorr-Backend
