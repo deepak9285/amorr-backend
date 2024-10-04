@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+const {Schema} = mongoose
+
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -30,6 +32,8 @@ const userSchema = new mongoose.Schema({
   userPreferencesID: { type: Schema.Types.ObjectId, ref: 'UserPreferences' },
   activityIds: [{ type: Schema.Types.ObjectId, ref: 'ActivityCollection' }],
   milestones: [{ type: Schema.Types.ObjectId, ref: 'UserMilestone' }]
+}, {
+  timestamps:true
 });
 
 

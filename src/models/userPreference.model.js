@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+const {Schema} = mongoose;
+
 const UserPreferencesSchema = new mongoose.Schema({
   userID: { type: Schema.Types.ObjectId, ref: 'User' },
   preferredGender: { type: String },

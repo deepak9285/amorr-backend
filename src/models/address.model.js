@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-
+const {Schema} = mongoose;
 
 const AddressSchema = new mongoose.Schema({
   userID: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -10,6 +10,8 @@ const AddressSchema = new mongoose.Schema({
   country: { type: String },
   longitude: { type: String },
   latitude: { type: String }
+},{
+  timestamps:true
 });
 
 const Address = mongoose.model('Address', AddressSchema);
