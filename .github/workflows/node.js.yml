@@ -30,4 +30,4 @@ jobs:
     - name: Switch user
       run: sudo su - ubuntu
     - name: Restart Production Deployment
-      run: pm2 restart Amorr-Backend --update-env
+      run: sudo pm2 restart Amorr-Backend --update-env
