@@ -27,7 +27,7 @@ jobs:
     - run: npm ci
     - name: Share env to the Project
       run: sudo cp /home/ubuntu/backend-secrets/.env /home/ubuntu/backend/_work/amorr_server/amorr_server/
-    - name: Install pm2 globally
-      run: npm install pm2 -g
+    - name: Add PM2 to PATH
+      run: echo "/home/ubuntu/.nvm/versions/node/v20.17.0/bin" >> $GITHUB_ENV
     - name: Restart Production Deployment
       run: sudo pm2 restart Amorr-Backend
