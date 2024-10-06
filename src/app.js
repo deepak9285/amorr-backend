@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import authRouter from "./routers/auth.routers.js";
+import profileRouter from "./routers/profile.routers.js";
 
 const app = express();
 dotenv.config();
@@ -30,5 +31,6 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
+app.use("/api/profile", profileRouter);
 
 export { app };
