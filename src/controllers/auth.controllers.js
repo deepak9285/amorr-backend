@@ -2,6 +2,7 @@ import { Otp } from "../models/otp.model.js";
 import { User } from "../models/user.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import bcrypt from "bcrypt";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -154,10 +155,13 @@ const register = async(req,res)=>{
     if (existingUser) {
       return res.json(new ApiResponse(409, "User already exists!"));
     }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
     const newUser = await User.create({
       username,
       email,
-      password
+      password:hashedPassword
     });
 
     return res.json(
@@ -169,10 +173,55 @@ const register = async(req,res)=>{
   }
 }
 
+const sendForgetPasswordMail = async(req,res)=>{
+  try{
+    const {userID} = req.body;
+    if(!userID) return res.json(new ApiResponse(400, null, 'UserID not provided.'));
+
+    const user = await User.findById(userID);
+
+    if(!user) return res.json(new ApiResponse(404, null, 'user not found.'));
+
+    
+
+  }
+  catch(err){
+    return handleErr(res,err);
+  }
+}
+
+const forgetPassword = async(req,res)=>{
+  try{
+
+    const {userID, password, newPassword} = req.body;
+    if(!userID) return res.json(new ApiResponse(404, null, "Invalid data."));
+  
+    const user = await User.findById(userID);
+
+    if(!user) return res.json(new ApiResponse(404, null, 'user not found!'));
+
+    const passwordCheck = await bcrypt.compare(user.password, password);
+
+    if(!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    const updatedUser = await User.findByIdAndUpdate(userID, {$set:{password:newHashedPassword}});
+
+    return res.json(new ApiResponse(200, updatedUser, 'Password changed successfully.'));
+
+  }
+  catch(err){
+    return handleErr(res,err);
+  }
+}
+
 
 export {
   loginUser,
   register,
   sendEmailOtp,
-  verifyEmailOtp
+  verifyEmailOtp,
+  forgetPassword,
+  sendForgetPasswordMail
 }
