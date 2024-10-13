@@ -48,7 +48,7 @@ const fetch_by_preferences = async (req, res) => {
     const { userID } = req.body;
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
-    const user = await UserPreferences.findOne({userID});
+    const user = await UserPreferences.findOne({ userID });
     if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
 
     console.log('log from fetch_by_preferences controller: ', user);
@@ -64,9 +64,9 @@ const fetch_by_preferences = async (req, res) => {
           }
         }
       ]
-    }).populate('userID'); 
+    }).populate('userID');
 
-    if(!result||result.length===0) return res.json(new ApiResponse(404, null, 'no user found.'));
+    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'no user found.'));
 
     return res.json(new ApiResponse(200, result, 'Users fetched successfully.'));
 
@@ -76,18 +76,33 @@ const fetch_by_preferences = async (req, res) => {
   }
 }
 
-// const like_profile = async(req,res)=>{
-//   try{
+const like_profile = async (req, res) => {
+  try {
 
-//   }
-//   catch(err){
-//     return handleErr(res,err);
-//   }
-// }
+    const { userID, profileID } = req.body;  // profileID: profile to be liked and userID: user which is liking the profile.
+    if (!userID || !profileID) return res.json(new ApiResponse(400, null, 'userID or profileID not provided.'))
+
+    const profile = await Profile.findById(profileID);
+    const user = await User.findById(userID);
+
+    if (!user || !profile) return res.json(new ApiResponse(404, null, 'Data not found.'));
+
+    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $push: { likes: { userID } } }, {new:true});
+
+    if(!updatedProfile) return res.json(new ApiResponse(500, 'unable to like the profile.'));
+
+    return res.json(new ApiResponse(200, updatedProfile, 'profile liked'));
+
+  }
+  catch (err) {
+    return handleErr(res, err);
+  }
+}
 
 
 
 export {
   updateProfile,
-  fetch_by_preferences
+  fetch_by_preferences,
+  like_profile
 }

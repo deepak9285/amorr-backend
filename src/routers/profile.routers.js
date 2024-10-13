@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { updateProfile } from "../controllers/profile.controller.js";
+import { fetch_by_preferences, like_profile, updateProfile } from "../controllers/profile.controller.js";
 
 const router = Router();
 
 router.route("/update").post(updateProfile);
+router.route("/fetch/preference").post(fetch_by_preferences);
+router.route("/like").post(like_profile);
 
 export default router;
