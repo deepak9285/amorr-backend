@@ -27,6 +27,19 @@ const userSchema = new mongoose.Schema({
   security: { type: String }, 
   signUpMethod: { type: String },
   referralCode: { type: String },
+  loginHistory:[{
+    ipaddress:{
+      type:String,
+      required:true
+    },
+    deviceName:String,
+    deviceType:String,
+    location:String,
+    timeOfLogin:{
+      type:String,
+      required:true
+    },
+  }],
   profileID: { type: Schema.Types.ObjectId, ref: 'Profile' },
   addressID: { type: Schema.Types.ObjectId, ref: 'Address' },
   userPreferencesID: { type: Schema.Types.ObjectId, ref: 'UserPreferences' },

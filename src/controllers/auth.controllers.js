@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
+import { transporter } from "../utils/transporter.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -182,7 +183,12 @@ const sendForgetPasswordMail = async(req,res)=>{
 
     if(!user) return res.json(new ApiResponse(404, null, 'user not found.'));
 
-    
+
+    const mailOptions = {
+        
+    }
+
+    transporter.sendMail();
 
   }
   catch(err){
