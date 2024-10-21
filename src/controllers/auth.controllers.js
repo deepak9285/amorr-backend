@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
 
 const generateAccessAndRefreshToken = async (userId) => {

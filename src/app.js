@@ -1,5 +1,17 @@
-import cookieParser from "cookie-parser";
 import cors from "cors";
+// app.use(
+//   cors({
+//     origin: ["http://localhost:3000"],
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+//     credentials: true,
+//     allowedHeaders: "Authorization, Content-Type, Accept",
+//     optionsSuccessStatus: 200,
+//     exposedHeaders: ["set-cookie"],
+//   })
+// );
+
+
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import express from "express";
 import authRouter from "./routers/auth.routers.js";
@@ -12,11 +24,9 @@ app.get("/health", (req, res) => {
   res.send("Health OK");
 });
 
-// middlewares
-
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
     allowedHeaders: "Authorization, Content-Type, Accept",
@@ -24,6 +34,8 @@ app.use(
     exposedHeaders: ["set-cookie"],
   })
 );
+
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
