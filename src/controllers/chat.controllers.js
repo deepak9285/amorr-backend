@@ -14,11 +14,11 @@ const createOrGetAOneOnOneChat = async (req, res) => {
 
         const userId = req.headers['user-id'];
         if (!userId) {
-            throw new ApiError(401, "User ID is required");
+            return new ApiError(401, "User ID is required");
         }
         const user = await User.findById(userId);
         if (!user) {
-            throw new ApiError(404, "User not found");
+            return new ApiError(404, "User not found");
         }
         req.user = user;
 
@@ -26,11 +26,11 @@ const createOrGetAOneOnOneChat = async (req, res) => {
         const receiver = await User.findById(receiverId);
 
         if (!receiver) {
-            throw new ApiError(404, "Receiver does not exist");
+            return new ApiError(404, "Receiver does not exist");
         }
 
         if (receiver._id.toString() === req.user._id.toString()) {
-            throw new ApiError(400, "You cannot chat with yourself");
+            return new ApiError(400, "You cannot chat with yourself");
         }
 
         const chat = await Chat.findOne({
@@ -52,7 +52,7 @@ const createOrGetAOneOnOneChat = async (req, res) => {
             .populate("participants", "username profileID email");
 
         if (!createdChat) {
-            throw new ApiError(500, "Internal server error");
+            return new ApiError(500, "Internal server error");
         }
 
         createdChat.participants.forEach((participant) => {
@@ -78,12 +78,12 @@ const getAllChats = async (req, res) => {
     try {
         const userId = req.headers['user-id'];
         if (!userId) {
-            throw new ApiError(401, "User ID is required");
+            return new ApiError(401, "User ID is required");
         }
 
         const user = await User.findById(userId);
         if (!user) {
-            throw new ApiError(404, "User not found");
+            return new ApiError(404, "User not found");
         }
         console.log(user);
 

@@ -16,23 +16,23 @@ const sendMessage = (async (req, res) => {
 
         const userId = req.headers['user-id'];
         if (!userId) {
-            throw new ApiError(401, "User ID is required");
+            return new ApiError(401, "User ID is required");
         }
         const user = await User.findById(userId);
         if (!user) {
-            throw new ApiError(404, "User not found");
+            return new ApiError(404, "User not found");
         }
         req.user = user;
 
 
         if (!content) {
-            throw new ApiError(400, "Message content is required");
+            return new ApiError(400, "Message content is required");
         }
 
         const selectedChat = await Chat.findById(chatId);
 
         if (!selectedChat) {
-            throw new ApiError(404, "Chat does not exist");
+            return new ApiError(404, "Chat does not exist");
         }
 
         const message = await ChatMessage.create({
@@ -56,7 +56,7 @@ const sendMessage = (async (req, res) => {
             .populate("chat");
 
         if (!receivedMessage) {
-            throw new ApiError(500, "Internal server error");
+            return new ApiError(500, "Internal server error");
         }
 
         chat.participants.forEach((participantObjectId) => {
@@ -87,21 +87,21 @@ const getAllMessages = async (req, res) => {
 
         const selectedChat = await Chat.findById(chatId);
         if (!selectedChat) {
-            throw new ApiError(404, "Chat does not exist");
+            return new ApiError(404, "Chat does not exist");
         }
 
         const userId = req.headers['user-id'];
         if (!userId) {
-            throw new ApiError(401, "User ID is required");
+            return new ApiError(401, "User ID is required");
         }
         const user = await User.findById(userId);
         if (!user) {
-            throw new ApiError(404, "User not found");
+            return new ApiError(404, "User not found");
         }
         req.user = user;
 
         if (!selectedChat.participants?.includes(req.user._id)) {
-            throw new ApiError(400, "User is not a part of this chat");
+            return new ApiError(400, "User is not a part of this chat");
         }
 
         const messages = await ChatMessage.find({ chat: chatId })
@@ -127,11 +127,11 @@ const deleteMessage = (async (req, res) => {
 
     const userId = req.headers['user-id'];
     if (!userId) {
-        throw new ApiError(401, "User ID is required");
+        return new ApiError(401, "User ID is required");
     }
     const user = await User.findById(userId);
     if (!user) {
-        throw new ApiError(404, "User not found");
+        return new ApiError(404, "User not found");
     }
     req.user = user;
 
@@ -141,7 +141,7 @@ const deleteMessage = (async (req, res) => {
     });
 
     if (!chat) {
-        throw new ApiError(404, "Chat does not exist");
+        return new ApiError(404, "Chat does not exist");
     }
 
     const message = await ChatMessage.findOne({
@@ -149,11 +149,11 @@ const deleteMessage = (async (req, res) => {
     });
 
     if (!message) {
-        throw new ApiError(404, "Message does not exist");
+        return new ApiError(404, "Message does not exist");
     }
 
     if (message.sender.toString() !== req.user._id.toString()) {
-        throw new ApiError(
+        return new ApiError(
             403,
             "You are not the authorised to delete the message, you are not the sender"
         );
