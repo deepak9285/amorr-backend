@@ -1,10 +1,11 @@
 import { Otp } from "../models/otp.model.js";
 import { User } from "../models/user.model.js";
-import { handleErr } from "../utils/apiError.js";
+import { ApiError, handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
 // import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
+import { v4 as uuidv4 } from "uuid";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -47,12 +48,12 @@ const sendEmailOtp = async (req, res) => {
       email,
       otp: hashedOtp,
     }).save();
-    
+
     transporter.sendMail(mailOptions);
 
-    return res.status(200).json(new ApiResponse(200, newOtp,"Otp sent successfully"));
-  
-  } 
+    return res.status(200).json(new ApiResponse(200, newOtp, "Otp sent successfully"));
+
+  }
   catch (err) {
     console.log(err);
     return res.json(new ApiError(400, err.message));
@@ -66,21 +67,21 @@ const verifyEmailOtp = async (req, res) => {
     if (!email || !otp) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
-  
+
     const existingUser = await User.findOne({ email });
-  
+
     if (existingUser) {
       return res.json(new ApiResponse(409, "User already exists!"));
     }
-  
+
     const hashedOtp = await Otp.findOne({ email });
-  
+
     if (!hashedOtp) {
       return res.json(new ApiResponse(404, "Otp not found"));
     }
-  
+
     const { createdAt } = hashedOtp;
-    
+
     if (createdAt < Date.now() - 600000) {
       return res.json(
         new ApiResponse(422, "Otp has expired , please request again")
@@ -92,12 +93,12 @@ const verifyEmailOtp = async (req, res) => {
     if (verify) {
       await Otp.deleteOne({ email });
       return res.json(new ApiResponse(200, "Email verified successfully"));
-    } 
+    }
     else {
       return res.json(new ApiResponse(400, "Otp entered is wrong"));
     }
 
-  } 
+  }
   catch (err) {
     // console.log(err);
     return res.json(new ApiError(400, "verification failed", err.message));
@@ -113,13 +114,13 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.json(new ApiResponse(404,null , "User not found!"));
+      return res.json(new ApiResponse(404, null, "User not found!"));
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (!isPasswordValid) {
-      return res.json(new ApiResponse(401, null ,"Password incorrect!"));
+      return res.json(new ApiResponse(401, null, "Password incorrect!"));
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -147,10 +148,10 @@ const loginUser = async (req, res) => {
 
 
 
-const register = async(req,res)=>{
-  try{
+const register = async (req, res) => {
+  try {
     const { username, email, password } = req.body;
-    if (!username || !email || !password ) {
+    if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
     const existingUser = await User.findOne({ email });
@@ -163,63 +164,94 @@ const register = async(req,res)=>{
     const newUser = await User.create({
       username,
       email,
-      password:hashedPassword
+      password: hashedPassword
     });
 
     return res.json(
       new ApiResponse(201, newUser, "User registered successfully!")
     );
   }
-  catch(err){
-    return handleErr(res,err);
+  catch (err) {
+    return handleErr(res, err);
   }
 }
 
-const sendForgetPasswordMail = async(req,res)=>{
-  try{
-    const {userID} = req.body;
-    if(!userID) return res.json(new ApiResponse(400, null, 'UserID not provided.'));
+const sendForgetPasswordMail = async (req, res) => {
+  try {
+    const { userID } = req.body;
+    if (!userID) return res.json(new ApiResponse(400, null, 'UserID not provided.'));
+    if (!process.env.AUTH_EMAIL) return res.json(new ApiError(400, 'AUTH EMAIL cannot be undefined.'));
 
     const user = await User.findById(userID);
+    if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
 
-    if(!user) return res.json(new ApiResponse(404, null, 'user not found.'));
+    const resetPasswordToken = uuidv4();
 
+    // expires after 15 min
+    const date = new Date();
+    const expDate = new Date(date.getTime() + 15 * 60000);
+
+    const updatedUser = await User.findByIdAndUpdate(userID, {
+      $set: {
+        resetPasswordToken,
+        resetPasswordExpires: expDate
+      }
+    }, { new: true });
+
+    if (!updatedUser) return res.json(new ApiResponse(400, null, 'unable to create reset password token.'));
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetPasswordToken}`
 
     const mailOptions = {
-        
+      from: {
+        name: "Amorr",
+        address: process.env.AUTH_EMAIL,
+      },
+      to: user.email,
+      subject: 'Password Reset Email.',
+      html: `<p>You requested for a password reset. Click <a href="${resetUrl}">here</a> to reset your password. This link is valid for 15 minute.`
     }
 
-    transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
+
+    return res.json(new ApiResponse(200, null, 'mail sent successfully.'));
 
   }
-  catch(err){
-    return handleErr(res,err);
+  catch (err) {
+    return handleErr(res, err);
   }
 }
 
-const forgetPassword = async(req,res)=>{
-  try{
+const forgetPassword = async (req, res) => {
+  try {
 
-    const {userID, password, newPassword} = req.body;
-    if(!userID) return res.json(new ApiResponse(404, null, "Invalid data."));
-  
-    const user = await User.findById(userID);
+    const { password, newPassword } = req.body;
 
-    if(!user) return res.json(new ApiResponse(404, null, 'user not found!'));
+    const { token } = req.params;
+
+    const user = await User.findOne({ resetPasswordToken: token });
+
+    if (!user) return res.json(new ApiResponse(401, null, 'Unauthorized! Invalid Token!'));
+
+    if (user.resetPasswordExpires < Date.now()) {
+      return res.json(new ApiResponse(403, null, 'Token expired.'));
+    }
+
+    
 
     const passwordCheck = await bcrypt.compare(user.password, password);
 
-    if(!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
+    if (!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
 
     const newHashedPassword = await bcrypt.hash(newPassword, 12);
-    
-    const updatedUser = await User.findByIdAndUpdate(userID, {$set:{password:newHashedPassword}});
+
+    const updatedUser = await User.findByIdAndUpdate(userID, { $set: { password: newHashedPassword } });
 
     return res.json(new ApiResponse(200, updatedUser, 'Password changed successfully.'));
 
   }
-  catch(err){
-    return handleErr(res,err);
+  catch (err) {
+    return handleErr(res, err);
   }
 }
 
