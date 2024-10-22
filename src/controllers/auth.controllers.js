@@ -23,13 +23,16 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 const sendEmailOtp = async (req, res) => {
   try {
+    console.log('send otp api');
+    
     const { email } = req.body;
     // Delete all previous otps for the user
     await Otp.deleteMany({ email });
     const user = await User.findOne({ email });
-    if (user) {
-      return res.json(new ApiResponse(409, "User already exists!"));
+    if (user.isEmailVerified) {
+      return res.json(new ApiResponse(409, "Email already verified!"));
     }
+    console.log('gen otp')
     // Generate a new otp
     const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
     const mailOptions = {
