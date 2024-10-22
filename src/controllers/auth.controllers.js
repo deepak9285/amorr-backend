@@ -189,7 +189,7 @@ const sendForgetPasswordMail = async(req,res)=>{
         
     }
 
-    transporter.sendMail();
+    transporter.sendMail(mailOptions);
 
   }
   catch(err){
