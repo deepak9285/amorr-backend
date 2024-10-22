@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  resetPasswordToken:String,
+  resetPasswordExpires:Date,
   refreshToken: String,
   accessToken: String,
   security: { type: String }, 
@@ -87,6 +89,6 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 
-const User = mongoose.model("user", userSchema);
+const User = mongoose.model("User", userSchema);
 
 export { User };

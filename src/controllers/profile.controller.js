@@ -62,7 +62,8 @@ const fetch_by_preferences = async (req, res) => {
             $gte: user.ageRange.min,
             $lte: user.ageRange.max
           }
-        }
+        },
+        { relationshipPreference: { $regex: user.relationshipPreference } }
       ]
     }).populate('userID');
 
@@ -87,12 +88,22 @@ const like_profile = async (req, res) => {
 
     if (!user || !profile) return res.json(new ApiResponse(404, null, 'Data not found.'));
 
-    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $push: { likes: { userID } } }, {new:true});
+    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $push: { likes: { userID } } }, { new: true });
 
-    if(!updatedProfile) return res.json(new ApiResponse(500, 'unable to like the profile.'));
+    if (!updatedProfile) return res.json(new ApiResponse(500, 'unable to like the profile.'));
 
     return res.json(new ApiResponse(200, updatedProfile, 'profile liked'));
 
+  }
+  catch (err) {
+    return handleErr(res, err);
+  }
+}
+
+
+const dislike_profile = async (req, res) => {
+  try {
+    
   }
   catch (err) {
     return handleErr(res, err);
