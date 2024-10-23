@@ -87,7 +87,7 @@ const getAllChats = async (req, res) => {
         }
         console.log(user);
 
-        req.user = user; 
+        req.user = user;
 
         const chats = await Chat.find({
             participants: user._id,

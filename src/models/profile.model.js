@@ -11,11 +11,19 @@ const ProfileSchema = new mongoose.Schema({
     type: String,
     enum:['m', 'f', 'o']
   },
+  lookingFor: { 
+    type: String,
+    enum:['m', 'f', 'o']
+  },
+  location: { type: String },
   dob: { type: Date },
   height:{
     type:String
   },
-  
+  relationshipPreference:{
+    type:String,
+    enum:['Life Long partner', 'Long Term Relationship', 'Short Term Relationship', 'Friship & Connection', 'Situationship', 'Something casual']
+  },
   likes:[
     {
       type:mongoose.Schema.Types.ObjectId,

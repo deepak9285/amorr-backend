@@ -30,7 +30,6 @@ app.get("/health", (req, res) => {
 });
 
 // middlewares
-
 app.use(
   cors({
     origin: ["http://localhost:3000"],
