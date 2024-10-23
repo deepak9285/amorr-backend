@@ -7,38 +7,31 @@ import profileRouter from "./routers/profile.routers.js";
 import chatRouter from "./routers/chat.routers.js";
 import messRouter from "./routers/message.routers.js";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import setupSocketIO from "./socket/socket.js";
 
 const app = express();
 dotenv.config();
-
 const httpServer = createServer(app);
-
-const io = new Server(httpServer, {
-  pingTimeout: 60000,
-  cors: {
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true,
-  },
-});
-
+const io = setupSocketIO(httpServer);
 app.set("io", io);
 
 app.get("/health", (req, res) => {
-  res.send("Health OK");
+    res.send("Health OK");
 });
 
+<<<<<<< HEAD
 // middlewares
+=======
+>>>>>>> a325e2a1cdb36e936d97622f6f48b32cb824ca7c
 app.use(
-  cors({
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true,
-    allowedHeaders: "Authorization, Content-Type, Accept",
-    optionsSuccessStatus: 200,
-    exposedHeaders: ["set-cookie"],
-  })
+    cors({
+        origin: ["http://localhost:3000"],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        credentials: true,
+        allowedHeaders: "Authorization, Content-Type, Accept",
+        optionsSuccessStatus: 200,
+        exposedHeaders: ["set-cookie"],
+    })
 );
 
 app.use(express.json());
