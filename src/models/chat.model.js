@@ -14,7 +14,6 @@ const chatSchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "ChatMessage",
         },
-
     },
     { timestamps: true }
 );
