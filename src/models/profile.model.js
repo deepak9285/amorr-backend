@@ -15,11 +15,6 @@ const ProfileSchema = new mongoose.Schema({
   height:{
     type:String
   },
-  relationshipPreference:{
-    type:String,
-    enum:['Life Long partner', 'Long Term Relationship', 'Short Term Relationship', 'Friship & Connection', 'Situationship', 'Something casual'],
-    required:true
-  },
   likes:[
     {
       type:mongoose.Schema.Types.ObjectId,

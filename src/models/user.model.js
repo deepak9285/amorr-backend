@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const {Schema} = mongoose
 
@@ -44,7 +46,9 @@ const userSchema = new mongoose.Schema({
   addressID: { type: Schema.Types.ObjectId, ref: 'Address' },
   userPreferencesID: { type: Schema.Types.ObjectId, ref: 'UserPreferences' },
   activityIds: [{ type: Schema.Types.ObjectId, ref: 'ActivityCollection' }],
-  milestones: [{ type: Schema.Types.ObjectId, ref: 'UserMilestone' }]
+  milestones: [{ type: Schema.Types.ObjectId, ref: 'UserMilestone' }],
+  points : {type:Number, default: 0 },
+  likes : [String]
 }, {
   timestamps:true
 });
@@ -85,6 +89,6 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 
-const User = mongoose.model("user", userSchema);
+const User = mongoose.model("User", userSchema);
 
 export { User };

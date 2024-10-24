@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -106,7 +107,7 @@ const verifyEmailOtp = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email && !password) {
+    if (!email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
     const user = await User.findOne({ email });

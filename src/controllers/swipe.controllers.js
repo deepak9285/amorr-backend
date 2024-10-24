@@ -1,33 +1,35 @@
-import { Swipe } from "../models/Swipe.model";
-import {Match} from "../models/Match.model"
-
+import {Match} from "../models/Match.model.js"
+import { User } from "../models/user.model.js"
+import { ApiResponse } from "../utils/apiResponse.js";
 const swipe = async(req,res) =>{
     const { userId, targetUserId, action } = req.body;
 
     if (!userId || !targetUserId || !['like', 'dislike'].includes(action)) {
         return res.json(new ApiResponse(404, null, 'invalid request'));
     }
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
 
     try {
-        const newSwipe = new Swipe({ userId, targetUserId, action });
-        await newSwipe.save();
 
         if (action === 'like') {
-            const matchFound = await Swipe.findOne({
-                userId: targetUserId,
-                targetUserId: userId,
-                action: 'like'
-            });
+            const likeExists =  user.likes.includes(targetUserId);
 
-            if (matchFound) {
+            if (likeExists) {
                 const newMatch = new Match({ userId1: userId, userId2: targetUserId });
                 await newMatch.save();
 
                 return res.json(new ApiResponse(200, null, 'Its a match!'));
             }
+            else{
+                user.likes.push(targetUserId);
+                await user.save();
+            }
         }
 
-        return res.json(new ApiResponse(200, null, 'Swipe Recorded, no match!'));
+        return res.json(new ApiResponse(200, User, 'Swipe Recorded, no match!'));
     }
     catch (error) {
         return res.json(new ApiResponse(500, null, 'Server error'));

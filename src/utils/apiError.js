@@ -40,5 +40,4 @@ const handleErr = (res, err) => {
   return res.json(new ApiError(400, err.message));
 };
 
-export { ApiError   , handleErr};
-
+export { ApiError, handleErr};

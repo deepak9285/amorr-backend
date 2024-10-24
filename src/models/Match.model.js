@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-const {Schema} = mongoose;
 
 const MatchSchema = new mongoose.Schema({
     userId1: String,
