@@ -1,6 +1,6 @@
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
-import mongoose from "mongoose";
+
 const pointscredited = async (req, res) => {
     const { userID, credit } = req.body;
     console.log("Request Body:", req.body); 
