@@ -170,6 +170,7 @@ const register = async (req, res) => {
       password: hashedPassword
     });
 
+    console.log(newUser)
     return res.json(
       new ApiResponse(201, newUser, "User registered successfully!")
     );

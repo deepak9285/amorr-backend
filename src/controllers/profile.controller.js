@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Profile } from "../models/profile.model.js";
 import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
@@ -17,7 +18,8 @@ const updateProfile = async (req, res) => {
       relationshipPreference,
       profilePic
     } = req.body;
-    const profile = await Profile.findOne({ userID });
+
+    const profile = await User.findById(new mongoose.Types.ObjectId(userID));
 
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
 
@@ -107,7 +109,7 @@ const like_profile = async (req, res) => {
 
 const dislike_profile = async (req, res) => {
   try {
-    
+
   }
   catch (err) {
     return handleErr(res, err);
