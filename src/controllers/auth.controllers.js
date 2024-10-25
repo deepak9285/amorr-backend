@@ -111,7 +111,7 @@ const verifyEmailOtp = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email && !password) {
+    if (!email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
     const user = await User.findOne({ email });
