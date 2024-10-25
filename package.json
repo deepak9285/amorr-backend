@@ -25,10 +25,7 @@
     "mongoose": "^8.5.2",
     "nodemailer": "^6.9.15",
     "socket.io": "^4.8.0",
-<<<<<<< HEAD
-    "nodemon": "^3.1.7"
-=======
+    "nodemon": "^3.1.7",
     "uuid": "^10.0.0"
->>>>>>> aa391a130dd0c49727afbc8c6c06f31915a4b277
   }
 }
