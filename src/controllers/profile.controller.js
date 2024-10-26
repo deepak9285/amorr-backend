@@ -10,7 +10,7 @@ const updateProfile = async (req, res) => {
       userID,
       profilePic,
       bio,
-      gender,
+      gender, 
       dob,
       height,
       relationshipPreference
