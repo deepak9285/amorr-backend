@@ -6,8 +6,11 @@ import authRouter from "./routers/auth.routers.js";
 import profileRouter from "./routers/profile.routers.js";
 import chatRouter from "./routers/chat.routers.js";
 import messRouter from "./routers/message.routers.js";
+import pointsRouter from "./routers/points.routers.js";
+import swipeRouter from './routers/swipe.routers.js'
 import { createServer } from "http";
 import setupSocketIO from "./socket/socket.js";
+
 
 const app = express();
 dotenv.config();
@@ -19,6 +22,7 @@ app.get("/health", (req, res) => {
     res.send("Health OK");
 });
 
+// middlewares
 app.use(
     cors({
         origin: ["http://localhost:3000"],
@@ -39,5 +43,6 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/message", messRouter);
-
+app.use("/api/points", pointsRouter);
+app.use( "/api/swipe",swipeRouter);
 export { httpServer };

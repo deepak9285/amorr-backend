@@ -19,4 +19,3 @@ router.route("/send-email-otp").post(sendEmailOtp);
 router.route("/verify-email-otp").post(verifyEmailOtp);
 
 export default router;
-
