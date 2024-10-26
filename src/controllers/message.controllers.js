@@ -5,40 +5,85 @@ import { Chat } from "../models/chat.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { ApiError, handleErr } from "../utils/apiError.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
+import fs from "fs";
+import generateHash from "../utils/generateHash.js";
 
 const emitSocketEvent = (req, roomId, event, payload) => {
     req.app.get("io").in(roomId).emit(event, payload);
+};
+
+const getStaticFilePath = (req, fileName) => {
+    return `${req.protocol}://${req.get("host")}/images/${fileName}`;
+};
+
+const getLocalPath = (fileName) => {
+    return `public/images/${fileName}`;
+};
+
+const removeLocalFile = (localPath) => {
+    fs.unlink(localPath, (err) => {
+        if (err) console.error("Error while removing local files: ", err);
+        else {
+            console.info("Removed local: ", localPath);
+        }
+    });
 };
 
 const sendMessage = async (req, res) => {
     try {
         const { chatId } = req.params;
         const { content } = req.body;
-
         const userId = req.headers['user-id'];
+
         if (!userId) {
             return res.status(401).json(new ApiError(401, "User ID is required"));
         }
+
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json(new ApiError(400, "Invalid User ID format"));
+        }
+
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json(new ApiError(404, "User not found"));
         }
-        req.user = user;
 
-        if (!content) {
-            return res.status(400).json(new ApiError(400, "Message content is required"));
+        if (!content && !(req.files?.attachments?.length > 0)) {
+            return res.status(400).json(new ApiError(400, "Message content or attachment is required"));
         }
 
-        const selectedChat = await Chat.findById(chatId);
+        const selectedChat = await Chat.findOne({ chatId });
+
         if (!selectedChat) {
             return res.status(404).json(new ApiError(404, "Chat does not exist"));
         }
 
+        const messageFiles = [];
+        if (req.files && req.files.attachments?.length > 0) {
+            req.files.attachments.map((attachment) => {
+                messageFiles.push({
+                    url: getStaticFilePath(req, attachment.filename),
+                    localPath: getLocalPath(attachment.filename),
+                });
+            });
+        }
+
+
+        const msgId = await generateHash(`${chatId}-${userId}-${Date.now()}`);
+
         const message = await ChatMessage.create({
-            sender: new mongoose.Types.ObjectId(req.user._id),
-            content: content || "",
-            chat: new mongoose.Types.ObjectId(chatId),
+            msg_hash: msgId,
+            msg_conversation_hash: chatId,
+            msg_sender_amorr_id: userId,
+            msg_timestamp: Date.now(),
+            msg_added_time: Date.now(),
+            msg_updated_time: Date.now(),
+            msg_sent_status: true,
+            msg_deleted_status: false,
+            msg_text: content || "",
+            msg_mediaUrl: messageFiles,
         });
+
 
         const chat = await Chat.findByIdAndUpdate(
             chatId,
@@ -51,15 +96,15 @@ const sendMessage = async (req, res) => {
         );
 
         const receivedMessage = await ChatMessage.findById(message._id)
-            .populate("sender")
-            .populate("chat");
+            .populate("msg_sender_dhondi_id", "isOnline username")
+            .populate("msg_conversation_hash", "name isGroup userBlocked lastMessage");
 
         if (!receivedMessage) {
             return res.status(500).json(new ApiError(500, "Internal server error"));
         }
 
         chat.participants.forEach((participantObjectId) => {
-            if (participantObjectId.toString() === req.user._id.toString()) return;
+            if (participantObjectId.toString() === userId.toString()) return;
 
             emitSocketEvent(
                 req,
@@ -68,21 +113,48 @@ const sendMessage = async (req, res) => {
                 receivedMessage
             );
         });
+        console.log("done emit");
 
         return res
             .status(201)
             .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
+
     } catch (err) {
         console.error("Error in sendMessage:", err);
         return handleErr(res, err);
     }
 };
+//Response
+// {
+//     "_id": {
+//       "$oid": "671cf9ebdeb5aab42c364a01"
+//     },
+//     "msg_hash": "ea5e990d27f4ba0185fbb61165fe2e30",
+//     "msg_conversation_hash": "913e1a7a153b04f248756eddc87b9a5d",
+//     "msg_sender_amorr_id": "67152a1c7e37c78ce9eaabce",
+//     "msg_timestamp": {
+//       "$date": "2024-10-26T14:17:15.102Z"
+//     },
+//     "msg_added_time": {
+//       "$date": "2024-10-26T14:17:15.102Z"
+//     },
+//     "msg_updated_time": {
+//       "$date": "2024-10-26T14:17:15.102Z"
+//     },
+//     "msg_sent_status": true,
+//     "msg_deleted_status": false,
+//     "msg_text": "Hell msg",
+//     "msg_mediaUrl": [],
+//     "msg_fileSize": 0,
+//     "__v": 0
+//   }
 
 const getAllMessages = async (req, res) => {
     try {
         const { chatId } = req.params;
 
         const selectedChat = await Chat.findById(chatId);
+
         if (!selectedChat) {
             return res.status(404).json(new ApiError(404, "Chat does not exist"));
         }
@@ -101,10 +173,10 @@ const getAllMessages = async (req, res) => {
             return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
         }
 
-        const messages = await ChatMessage.find({ chat: chatId })
-            .sort({ createdAt: -1 })
-            .populate("sender", "_id username")
-            .populate("chat", "createdAt");
+        const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false })
+            .sort({ msg_timestamp: -1 })
+            .populate("sender", "username")
+            .populate("chat", "name");
 
         return res
             .status(200)
@@ -123,6 +195,7 @@ const deleteMessage = async (req, res) => {
         if (!userId) {
             return res.status(401).json(new ApiError(401, "User ID is required"));
         }
+
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json(new ApiError(404, "User not found"));
@@ -130,44 +203,42 @@ const deleteMessage = async (req, res) => {
         req.user = user;
 
         const chat = await Chat.findOne({
-            _id: new mongoose.Types.ObjectId(chatId),
-            participants: req.user?._id,
+            chatId : chatId,
+            participants: req.user._id,
         });
-
+        
         if (!chat) {
             return res.status(404).json(new ApiError(404, "Chat does not exist"));
         }
 
         const message = await ChatMessage.findOne({
-            _id: new mongoose.Types.ObjectId(messageId),
+            msg_hash : messageId,
         });
 
         if (!message) {
             return res.status(404).json(new ApiError(404, "Message does not exist"));
         }
 
-        if (message.sender.toString() !== req.user._id.toString()) {
+        if (message.msg_sender_amorr_id !== req.user._id.toString()) {
             return res.status(403).json(
-                new ApiError(
-                    403,
-                    "You are not authorized to delete the message; you are not the sender"
-                )
+                new ApiError(403, "You are not authorized to delete the message; you are not the sender")
             );
         }
 
-        await ChatMessage.deleteOne({
-            _id: new mongoose.Types.ObjectId(messageId),
-        });
+        await ChatMessage.updateOne(
+            { msg_hash: messageId },
+            { $set: { msg_deleted_status: true } }
+        );
 
         if (chat.lastMessage.toString() === message._id.toString()) {
             const lastMessage = await ChatMessage.findOne(
-                { chat: chatId },
+                { msg_conversation_hash: chatId, msg_deleted_status: false },
                 {},
-                { sort: { createdAt: -1 } }
+                { sort: { msg_timestamp: -1 } }
             );
 
             await Chat.findByIdAndUpdate(chatId, {
-                lastMessage: lastMessage ? lastMessage?._id : null,
+                lastMessage: lastMessage ? lastMessage._id : null,
             });
         }
 
@@ -182,9 +253,7 @@ const deleteMessage = async (req, res) => {
             );
         });
 
-        return res
-            .status(200)
-            .json(new ApiResponse(200, message, "Message deleted successfully"));
+        return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
     } catch (err) {
         console.error("Error in deleteMessage:", err);
         return handleErr(res, err);
