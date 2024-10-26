@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isOnline: { 
+    type: Boolean,
+    default: false
+  },
   resetPasswordToken:String,
   resetPasswordExpires:Date,
   refreshToken: String,
