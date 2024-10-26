@@ -33,8 +33,25 @@ const chatSchema = new Schema(
             ref: "ChatMessage",
         },
 
-    },
-    { timestamps: true }
+        manualTimestamp: {
+            type: Date,
+        },
+
+        userBlocked: {
+            type: Boolean,
+            default: false,
+        },
+
+        whoBlocked: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        },
+
+        admin: {
+            type: String,
+            ref: "User",
+        },
+    }
 );
 
 export const Chat = mongoose.model("Chat", chatSchema);
