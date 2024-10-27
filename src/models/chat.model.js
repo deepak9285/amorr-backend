@@ -9,7 +9,7 @@ const chatSchema = new Schema(
         name: {
             type: String,
             required: true,
-          },
+        },
 
         isGroup: {
             type: Boolean,
@@ -51,6 +51,10 @@ const chatSchema = new Schema(
             type: String,
             ref: "User",
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        }
     }
 );
 
