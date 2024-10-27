@@ -9,14 +9,14 @@ const updateProfile = async (req, res) => {
   try {
     const {
       userID,
+      profilePic,
+      bio,
+      gender, 
       dob,
-      gender,
       lookingFor,
       height,
-      bio,
       location,
       relationshipPreference,
-      profilePic
     } = req.body;
 
     const profile = await User.findById(new mongoose.Types.ObjectId(userID));

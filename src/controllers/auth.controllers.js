@@ -55,7 +55,6 @@ const sendEmailOtp = async (req, res) => {
     }).save();
 
     transporter.sendMail(mailOptions);
-
     return res.status(200).json(new ApiResponse(200, newOtp, "Otp sent successfully"));
 
   }
@@ -152,8 +151,11 @@ const loginUser = async (req, res) => {
 };
 
 const register = async (req, res) => {
+  
   try {
+   console.log("start");
     const { username, email, password } = req.body;
+    console.log(username);
     if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
@@ -183,6 +185,10 @@ const register = async (req, res) => {
       amorrID,
       userHash
     });
+<<<<<<< HEAD
+    console.log(newUser);
+    //console.log("end");
+=======
 
     // user profile
     const newProfile = await Profile.create({
@@ -201,6 +207,7 @@ const register = async (req, res) => {
     });
 
     console.log("New User and Profile Created:", newUser, newProfile);
+>>>>>>> bf5c90de7e4e17e743dbd3d374e030ef87d0f765
     return res.json(
       new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")
     );
