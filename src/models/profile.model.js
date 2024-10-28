@@ -40,6 +40,24 @@ const ProfileSchema = new mongoose.Schema({
       ref: 'User'
     }
   ],
+  userPhotos: [
+    {
+      label: {
+        type: String
+      },
+      url: {
+        type: String,
+        unique: true
+      },
+    }
+  ],
+  promptsAnswers: [
+    {
+      prompt:String,
+      ans: String
+    }
+  ],
+  completeness: Number
 },
   {
     timestamps: true

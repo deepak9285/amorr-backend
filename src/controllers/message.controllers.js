@@ -125,30 +125,6 @@ const sendMessage = async (req, res) => {
     }
 };
 
-//Response
-// {
-//     "_id": {
-//       "$oid": "671cf9ebdeb5aab42c364a01"
-//     },
-//     "msg_hash": "ea5e990d27f4ba0185fbb61165fe2e30",
-//     "msg_conversation_hash": "913e1a7a153b04f248756eddc87b9a5d",
-//     "msg_sender_amorr_id": "67152a1c7e37c78ce9eaabce",
-//     "msg_timestamp": {
-//       "$date": "2024-10-26T14:17:15.102Z"
-//     },
-//     "msg_added_time": {
-//       "$date": "2024-10-26T14:17:15.102Z"
-//     },
-//     "msg_updated_time": {
-//       "$date": "2024-10-26T14:17:15.102Z"
-//     },
-//     "msg_sent_status": true,
-//     "msg_deleted_status": false,
-//     "msg_text": "Hell msg",
-//     "msg_mediaUrl": [],
-//     "msg_fileSize": 0,
-//     "__v": 0
-//   }
 
 const getAllMessagesofChat = async (req, res) => {
     try {
