@@ -55,7 +55,6 @@ const sendEmailOtp = async (req, res) => {
     }).save();
 
     transporter.sendMail(mailOptions);
-
     return res.status(200).json(new ApiResponse(200, newOtp, "Otp sent successfully"));
 
   }
@@ -152,8 +151,11 @@ const loginUser = async (req, res) => {
 };
 
 const register = async (req, res) => {
+  
   try {
+   console.log("start");
     const { username, email, password } = req.body;
+    console.log(username);
     if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }

@@ -5,7 +5,7 @@ import crypto from "crypto";
 
 const { Schema } = mongoose;
 
-const userSchema = new mongoose.Schema(
+const  userSchema = new mongoose.Schema(
   {
     amorrID: {
       type: String,
