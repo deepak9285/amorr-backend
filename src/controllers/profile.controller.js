@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
-
 const updateProfile = async (req, res) => {
   try {
     const {
@@ -18,11 +17,8 @@ const updateProfile = async (req, res) => {
       location,
       relationshipPreference,
     } = req.body;
-
     const profile = await User.findById(new mongoose.Types.ObjectId(userID));
-
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
-
     const updatedProfile = await Profile.findOneAndUpdate({ userID }, {
       $set: {
         profilePic: profilePic || profile.profilePic,
@@ -35,11 +31,8 @@ const updateProfile = async (req, res) => {
         relationshipPreference: relationshipPreference || profile.relationshipPreference
       }
     });
-
     if (!updatedProfile) return res.json(new ApiResponse(500, null, "Unable to update profile , due to unexpected error."));
-
     return res.json(new ApiResponse(200, updatedProfile, 'Profile updated'));
-
   }
   catch (err) {
     return handleErr(res, err);

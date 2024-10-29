@@ -115,6 +115,7 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
+    console.log("start");
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -185,10 +186,8 @@ const register = async (req, res) => {
       amorrID,
       userHash
     });
-<<<<<<< HEAD
     console.log(newUser);
     //console.log("end");
-=======
 
     // user profile
     const newProfile = await Profile.create({
@@ -207,7 +206,6 @@ const register = async (req, res) => {
     });
 
     console.log("New User and Profile Created:", newUser, newProfile);
->>>>>>> bf5c90de7e4e17e743dbd3d374e030ef87d0f765
     return res.json(
       new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")
     );
