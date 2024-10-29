@@ -56,7 +56,7 @@ const chatMessageSchema = new Schema(
         msg_reply_text: {
             type: String,
         },
-        msg_reply_user_dhondi_id: {
+        msg_reply_user_amorr_id: {
             type: String,
         },
         msg_institution_code: {
@@ -77,7 +77,11 @@ const chatMessageSchema = new Schema(
         msg_fileSize: {
             type: Number,
             default: 0
-        }
+        },
+        seenBy: [{
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        }]
     }
 );
 

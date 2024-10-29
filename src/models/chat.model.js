@@ -9,12 +9,13 @@ const chatSchema = new Schema(
         name: {
             type: String,
             required: true,
-          },
+        },
 
         isGroup: {
             type: Boolean,
             default: false,
         },
+
         participants: [
             {
                 type: Schema.Types.ObjectId,
@@ -24,7 +25,7 @@ const chatSchema = new Schema(
         ],
 
         lastMessage: {
-            type: String,
+            type: Schema.Types.ObjectId,
             ref: "ChatMessage",
         },
 
@@ -35,6 +36,7 @@ const chatSchema = new Schema(
 
         manualTimestamp: {
             type: Date,
+            default: Date.now,
         },
 
         userBlocked: {
@@ -51,6 +53,10 @@ const chatSchema = new Schema(
             type: String,
             ref: "User",
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        }
     }
 );
 

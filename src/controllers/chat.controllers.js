@@ -111,69 +111,6 @@ const getAllChats = async (req, res) => {
         return handleErr(res, err);
     }
 };
-//Response
-// {
-//     "statusCode": 200,
-//     "data": [
-//       {
-//         "_id": "671ce44210e4005d77ba95a1",
-//         "chatId": "cc41578a6e6e6605547215962dbf9bf4",
-//         "name": "One on one chat",
-//         "isGroup": false,
-//         "participants": [
-//           {
-//             "_id": "6715291af72382426fc81b69"
-//           },
-//           {
-//             "_id": "67153924a3711b82fa0e2dec"
-//           }
-//         ],
-//         "userBlocked": false,
-//         "__v": 0
-//       },
-//       {
-//         "_id": "671ce5e010e4005d77ba95a7",
-//         "chatId": "913e1a7a153b04f248756eddc87b9a5d",
-//         "name": "Grp 01",
-//         "isGroup": true,
-//         "participants": [
-//           {
-//             "_id": "6715354190ac0c548a3e84e5"
-//           },
-//           {
-//             "_id": "67153924a3711b82fa0e2dec"
-//           },
-//           {
-//             "_id": "6715291af72382426fc81b69"
-//           }
-//         ],
-//         "userBlocked": false,
-//         "__v": 0
-//       },
-//       {
-//         "_id": "671ce96bac2b35c92224a838",
-//         "chatId": "d5bce9762b2750eece3849b92656328f",
-//         "name": "Grp 02",
-//         "isGroup": true,
-//         "participants": [
-//           {
-//             "_id": "6715354190ac0c548a3e84e5"
-//           },
-//           {
-//             "_id": "67153924a3711b82fa0e2dec"
-//           },
-//           {
-//             "_id": "6715291af72382426fc81b69"
-//           }
-//         ],
-//         "userBlocked": false,
-//         "admin": "2a06c58450b7ef3556edadba60384989",
-//         "__v": 0
-//       }
-//     ],
-//     "message": "User chats fetched successfully!",
-//     "success": true
-//   }
 
 const createAGroupChat = async (req, res) => {
     try {
@@ -276,7 +213,7 @@ const blockUser = async (req, res) => {
             return res.status(404).json(new ApiError(404, "User not found"));
         }
 
-        req.user = user; 
+        req.user = user;
 
         const userToBlock = await User.findById(userToBlockId);
         if (!userToBlock) {
@@ -346,7 +283,7 @@ const checkBlockStatus = async (req, res) => {
         if (!user) {
             return res.status(404).json(new ApiError(404, "User not found"));
         }
-        
+
         const userToCheck = await User.findById(userToCheckId);
         if (!userToCheck) {
             return res.status(404).json(new ApiError(404, "User to check not found"));
@@ -354,10 +291,175 @@ const checkBlockStatus = async (req, res) => {
 
         const isBlocked = userToCheck.userBlocked && userToCheck.whoBlocked?.toString() === req.user._id.toString();
         console.log(isBlocked);
-        
+
         return res.status(200).json(new ApiResponse(200, { isBlocked }, "Block status checked successfully"));
     } catch (err) {
         console.error("Error in checkBlockStatus:", err);
+        return handleErr(res, err);
+    }
+};
+
+const removeUserFromGroup = async (req, res) => {
+    try {
+        const { groupId, userIdToRemove } = req.params;
+        const userId = req.headers['user-id'];
+
+        if (!userId) {
+            return res.status(401).json(new ApiError(401, "User ID is required"));
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json(new ApiError(404, "User not found"));
+        }
+
+        const groupChat = await Chat.findById(groupId);
+        if (!groupChat) {
+            return res.status(404).json(new ApiError(404, "Group chat not found"));
+        }
+
+        if (groupChat.admin.toString() !== userId.toString()) {
+            return res.status(403).json(new ApiError(403, "Only the admin can remove users"));
+        }
+
+        if (!groupChat.participants.includes(userIdToRemove)) {
+            return res.status(400).json(new ApiError(400, "User is not a participant of this group"));
+        }
+
+        groupChat.participants = groupChat.participants.filter(participant => participant.toString() !== userIdToRemove);
+        await groupChat.save();
+
+        return res.status(200).json(new ApiResponse(200, null, "User removed from group successfully"));
+    } catch (err) {
+        console.error("Error in removeUserFromGroup:", err);
+        return handleErr(res, err);
+    }
+};
+
+const addUserToGroup = async (req, res) => {
+    try {
+        const { groupId, newUserId } = req.params;
+        const userId = req.headers['user-id'];
+
+        if (!userId) {
+            return res.status(401).json(new ApiError(401, "User ID is required"));
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json(new ApiError(404, "User not found"));
+        }
+
+        const groupChat = await Chat.findById(groupId);
+        if (!groupChat) {
+            return res.status(404).json(new ApiError(404, "Group chat not found"));
+        }
+
+        if (groupChat.admin.toString() !== userId.toString()) {
+            return res.status(403).json(new ApiError(403, "Only the admin can add users to the group"));
+        }
+
+        if (groupChat.participants.includes(newUserId)) {
+            return res.status(400).json(new ApiError(400, "User is already a participant in the group"));
+        }
+
+        groupChat.participants.push(new mongoose.Types.ObjectId(newUserId));
+        await groupChat.save();
+
+        emitSocketEvent(
+            req,
+            newUserId,
+            ChatEventEnum.USER_ADDED_TO_GROUP,
+            { groupId: groupChat._id }
+        );
+
+        return res.status(200).json(new ApiResponse(200, null, "User added to group successfully"));
+    } catch (err) {
+        console.error("Error in addUserToGroup:", err);
+        return handleErr(res, err);
+    }
+};
+
+const deleteGroup = async (req, res) => {
+    const { groupId } = req.params;
+    const { userId } = req.body;
+
+    try {
+        const groupChat = await Chat.findOne({ chatId: groupId });
+
+        if (!groupChat) {
+            return res.status(404).json({ message: "Group not found" });
+        }
+
+        if (groupChat.admin.toString() !== userId) {
+            return res.status(403).json({ message: "Only the admin can delete the group" });
+        }
+
+        groupChat.isDeleted = true;
+        await groupChat.save();
+
+        return res.status(200).json({ message: "Group marked as deleted successfully" });
+    } catch (error) {
+        return res.status(500).json({ message: "An error occurred while deleting the group", error });
+    }
+};
+
+const editGroupDetails = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const { userId } = req.headers;
+        const { name, participants } = req.body;
+
+        if (!userId) {
+            return res.status(401).json(new ApiError(401, "User ID is required"));
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json(new ApiError(404, "User not found"));
+        }
+
+        const groupChat = await Chat.findById(groupId);
+        if (!groupChat) {
+            return res.status(404).json(new ApiError(404, "Group chat not found"));
+        }
+
+        if (groupChat.admin.toString() !== userId.toString()) {
+            return res.status(403).json(new ApiError(403, "Only the admin can edit group details"));
+        }
+
+        if (name) {
+            groupChat.name = name;
+        }
+
+        if (participants) {
+            const uniqueParticipants = [...new Set(participants.map((id) => id.toString()))];
+
+            if (uniqueParticipants.length < 3) {
+                return res.status(400).json(new ApiError(400, "Group must have at least 3 members, including the admin"));
+            }
+
+            if (!uniqueParticipants.includes(groupChat.admin.toString())) {
+                uniqueParticipants.push(groupChat.admin.toString());
+            }
+
+            groupChat.participants = uniqueParticipants;
+        }
+
+        await groupChat.save();
+
+        groupChat.participants.forEach((participant) => {
+            emitSocketEvent(
+                req,
+                participant.toString(),
+                ChatEventEnum.GROUP_UPDATED,
+                { groupId: groupChat._id, name: groupChat.name, participants: groupChat.participants }
+            );
+        });
+
+        return res.status(200).json(new ApiResponse(200, groupChat, "Group details updated successfully"));
+    } catch (err) {
+        console.error("Error in editGroupDetails:", err);
         return handleErr(res, err);
     }
 };
@@ -368,6 +470,10 @@ export {
     createOrGetAOneOnOneChat,
     getAllChats,
     getUserStatus,
+    addUserToGroup,
+    editGroupDetails,
+    removeUserFromGroup,
+    deleteGroup,
     blockUser,
     unblockUser,
     checkBlockStatus
