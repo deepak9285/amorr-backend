@@ -40,6 +40,12 @@ const ProfileSchema = new mongoose.Schema({
       ref: 'User'
     }
   ],
+  matches: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  ],
   userPhotos: [
     {
       label: {

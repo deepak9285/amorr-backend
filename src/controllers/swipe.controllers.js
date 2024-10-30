@@ -1,4 +1,4 @@
-import { User } from "../models/user.model.js"
+import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 const swipe = async(req,res) =>{
     const { userId, targetUserId, action } = req.body;
@@ -6,8 +6,8 @@ const swipe = async(req,res) =>{
     if (!userId || !targetUserId || !['like', 'dislike'].includes(action)) {
         return res.json(new ApiResponse(404, null, 'invalid request'));
     }
-    const targetUser = await User.findById(targetUserId);
-    const user = await User.findById(userId);
+    const targetUser = await Profile.findById(targetUserId);
+    const user = await Profile.findById(userId);
     
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
