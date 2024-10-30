@@ -6,6 +6,8 @@ import bcrypt from "bcrypt";
 // import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
 import { v4 as uuidv4 } from "uuid";
+import crypto from 'crypto';
+import { Profile } from "../models/profile.model.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -25,7 +27,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 const sendEmailOtp = async (req, res) => {
   try {
     console.log('send otp api');
-    
+
     const { email } = req.body;
     // Delete all previous otps for the user
     await Otp.deleteMany({ email });
@@ -53,7 +55,6 @@ const sendEmailOtp = async (req, res) => {
     }).save();
 
     transporter.sendMail(mailOptions);
-
     return res.status(200).json(new ApiResponse(200, newOtp, "Otp sent successfully"));
 
   }
@@ -149,14 +150,16 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-
 const register = async (req, res) => {
+  
   try {
+   console.log("start");
     const { username, email, password } = req.body;
+    console.log(username);
     if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.json(new ApiResponse(409, "User already exists!"));
@@ -164,20 +167,49 @@ const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    const userHash = crypto.createHash('md5').update(email).digest('hex');
+    const profileHash = crypto.createHash('md5').update(email + 'profile').digest('hex');
+
+    const amorrID = uuidv4();
+
+    const existingAmorrID = await User.findOne({ amorrID });
+    if (existingAmorrID) {
+      return res.json(new ApiResponse(409, "Generated amorrID already exists, try again."));
+    }
+
+    // user
     const newUser = await User.create({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      amorrID,
+      userHash
     });
 
+    // user profile
+    const newProfile = await Profile.create({
+      userID: newUser._id,
+      profileHash: profileHash,
+      amorrID: amorrID,
+      profilePic: "",
+      bio: "",
+      gender: null,
+      lookingFor: null,
+      location: "",
+      dob: null,
+      height: "",
+      relationshipPreference: null,
+      likes: []
+    });
+
+    console.log("New User and Profile Created:", newUser, newProfile);
     return res.json(
-      new ApiResponse(201, newUser, "User registered successfully!")
+      new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")
     );
-  }
-  catch (err) {
+  } catch (err) {
     return handleErr(res, err);
   }
-}
+};
 
 const sendForgetPasswordMail = async (req, res) => {
   try {
@@ -240,7 +272,7 @@ const forgetPassword = async (req, res) => {
       return res.json(new ApiResponse(403, null, 'Token expired.'));
     }
 
-    
+
 
     const passwordCheck = await bcrypt.compare(user.password, password);
 

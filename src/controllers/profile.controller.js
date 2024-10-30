@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Profile } from "../models/profile.model.js";
 import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
@@ -8,16 +9,18 @@ const updateProfile = async (req, res) => {
   try {
     const {
       userID,
+      profilePic,
+      bio,
+      gender, 
       dob,
-      gender,
       lookingFor,
       height,
-      bio,
       location,
       relationshipPreference,
-      profilePic
+      userPhotos
     } = req.body;
-    const profile = await Profile.findOne({ userID });
+
+    const profile = await User.findById(new mongoose.Types.ObjectId(userID));
 
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
 
@@ -30,7 +33,8 @@ const updateProfile = async (req, res) => {
         location: location || profile.location,
         dob: dob || profile.dob,
         height: height || profile.height,
-        relationshipPreference: relationshipPreference || profile.relationshipPreference
+        relationshipPreference: relationshipPreference || profile.relationshipPreference,
+        userPhotos: userPhotos || profile.userPhotos,
       }
     });
 
@@ -107,17 +111,49 @@ const like_profile = async (req, res) => {
 
 const dislike_profile = async (req, res) => {
   try {
-    
+
   }
   catch (err) {
     return handleErr(res, err);
   }
 }
 
+const calculateProfileCompleteness = async (req, res) => {
+  try {
+    const { userID } = req.body;
+    if (!userID) return res.json(new ApiResponse(400, null, 'User ID not provided.'));
 
+    const profile = await Profile.findOne({ userID });
+    if (!profile) return res.json(new ApiResponse(404, null, 'Profile not found.'));
+
+    let completeness = 0;
+    const totalCriteria = 10;
+
+    if (profile.profilePic) completeness += 1;
+    if (profile.bio) completeness += 1;
+    if (profile.gender) completeness += 1;
+    if (profile.dob) completeness += 1;
+    if (profile.lookingFor) completeness += 1;
+    if (profile.height) completeness += 1;
+    if (profile.location) completeness += 1;
+    if (profile.relationshipPreference) completeness += 1;
+    if (profile.userPhotos && profile.userPhotos.length > 0) completeness += 1;
+    if (profile.promptsAnswers && profile.promptsAnswers.length > 0 && profile.promptsAnswers.length <= 3) completeness += 1;
+
+    const compPer = (completeness / totalCriteria) * 100;
+
+    profile.completeness = compPer;
+    await profile.save();
+
+    return res.json(new ApiResponse(200, { completeness: compPer }, 'Profile completeness calculated and updated successfully.'));
+  } catch (err) {
+    return handleErr(res, err);
+  }
+};
 
 export {
   updateProfile,
   fetch_by_preferences,
-  like_profile
+  like_profile,
+  calculateProfileCompleteness
 }
