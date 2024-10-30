@@ -22,6 +22,7 @@ app.get("/health", (req, res) => {
     res.send("Health OK");
 });
 
+// middlewares
 app.use(
     cors({
         origin: ["http://localhost:3000"],

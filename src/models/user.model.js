@@ -49,8 +49,9 @@ const userSchema = new mongoose.Schema({
   userPreferencesID: { type: Schema.Types.ObjectId, ref: 'UserPreferences' },
   activityIds: [{ type: Schema.Types.ObjectId, ref: 'ActivityCollection' }],
   milestones: [{ type: Schema.Types.ObjectId, ref: 'UserMilestone' }],
-  points : {type:Number, default: 0 },
-  likes : [String]
+  likes : [String],
+  matches : [String],
+  points : {type:Number, default: 0 }
 }, {
   timestamps:true
 });
