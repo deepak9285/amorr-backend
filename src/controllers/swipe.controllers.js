@@ -22,15 +22,15 @@ const swipe = async (req, res) => {
             if (!user.likes.includes(targetUserId))
                 user.likes.push(targetUserId);
 
-            const likeExists = targetUser.likes.includes(userId);
+            const likeExists = targetUser.likes.includes(profileId);
 
             if (likeExists) {
                 if (!user.matches.includes(targetUserId))
                     user.matches.push(targetUserId);
                 await user.save();
 
-                if (!targetUser.matches.includes(userId))
-                    targetUser.matches.push(userId);
+                if (!targetUser.matches.includes(profileId))
+                    targetUser.matches.push(profileId);
                 await targetUser.save();
 
                 return res.json(new ApiResponse(200, user, 'Its a match!'));
