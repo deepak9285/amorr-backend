@@ -11,7 +11,7 @@ const updateProfile = async (req, res) => {
       userID,
       profilePic,
       bio,
-      gender, 
+      gender,
       dob,
       lookingFor,
       height,
@@ -155,9 +155,9 @@ const fetch_by_preferences = async (req, res) => {
     const sortedMatches = scoredMatches.map(item => item.match);
     
     if (!sortedMatches || sortedMatches.length === 0) 
-    return res.json(new ApiResponse(404, null, 'No users found.'));
+    return res.json(new ApiResponse(404, null, 'No user found'));
     
-    return res.json(new ApiResponse(200, sortedMatches, 'Users fetched successfully in order of preference match.'));    
+    return res.json(new ApiResponse(200, sortedMatches, 'preference match Users fetched successfully '));    
   }
   catch (err) {
     return handleErr(res, err);
