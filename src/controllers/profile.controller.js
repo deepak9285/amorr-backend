@@ -145,7 +145,7 @@ const fetch_by_preferences = async (req, res) => {
 
     const scoredMatches = await Promise.all(
       result.map(async match => {
-          const score = await calculateProfileSimilarity(userProfile, match, model);
+          const score = await calculateProfileSimilarity(user, match, UserPreferences);
           return { match, score };
       })
     );
