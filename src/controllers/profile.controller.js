@@ -11,7 +11,7 @@ const updateProfile = async (req, res) => {
       userID,
       profilePic,
       bio,
-      gender, 
+      gender,
       dob,
       lookingFor,
       height,
@@ -151,9 +151,30 @@ const calculateProfileCompleteness = async (req, res) => {
   }
 };
 
+const fetchProfileByUserID = async (req, res) => {
+  try {
+    const { userID } = req.body;
+
+    if (!userID) {
+      return res.json(new ApiResponse(400, null, 'User ID not provided.'));
+    }
+
+    const profile = await Profile.findOne({ userID: new mongoose.Types.ObjectId(userID) }).populate('userID');
+
+    if (!profile) {
+      return res.json(new ApiResponse(404, null, 'Profile not found.'));
+    }
+
+    return res.json(new ApiResponse(200, profile, 'Profile fetched successfully.'));
+  } catch (err) {
+    return handleErr(res, err);
+  }
+};
+
 export {
   updateProfile,
   fetch_by_preferences,
   like_profile,
-  calculateProfileCompleteness
+  calculateProfileCompleteness,
+  fetchProfileByUserID
 }
