@@ -1,3 +1,17 @@
+import tf from '@tensorflow/tfjs';
+import use from '@tensorflow-models/universal-sentence-encoder';
+
+let model;
+async function loadUSEModel() {
+    try {
+        model = await use.load();
+        console.log("USE model loaded.");
+    } catch (error) {
+        console.error("Error loading USE model:", error);
+    }
+}
+loadUSEModel();
+
 async function getEmbedding(model, text) {
     const embeddings = await model.embed([text]);
     return embeddings.arraySync()[0];
@@ -10,7 +24,7 @@ const cosineSimilarity = (vecA, vecB) => {
     return dotProduct / (magnitudeA * magnitudeB);
 };
 
-async function calculateProfileSimilarity(profile1, profile2, model) {
+async function calculateProfileSimilarity(profile1, profile2) {
     const interestsEmbedding1 = await getEmbedding(model, profile1.interests);
     const interestsEmbedding2 = await getEmbedding(model, profile2.interests);
     const lifestyleEmbedding1 = await getEmbedding(model, profile1.lifestyle);

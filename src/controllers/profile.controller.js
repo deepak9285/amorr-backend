@@ -5,15 +5,8 @@ import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
-const tf = require('@tensorflow/tfjs');
-const use = require('@tensorflow-models/universal-sentence-encoder');
-
-let useModel;
-async function loadUSEModel() {
-  useModel = await use.load();
-  console.log("USE model loaded.");
-}
-loadUSEModel();
+// const tf = require('@tensorflow/tfjs');
+// const use = require('@tensorflow-models/universal-sentence-encoder');
 
 const updateProfile = async (req, res) => {
   try {
@@ -155,7 +148,7 @@ const fetch_by_preferences = async (req, res) => {
 
     const scoredMatches = await Promise.all(
       result.map(async match => {
-        const score = await calculateProfileSimilarity(user, match, useModel);
+        const score = await calculateProfileSimilarity(user, match);
         return { match, score };
       })
     );
