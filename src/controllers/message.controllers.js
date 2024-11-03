@@ -7,6 +7,7 @@ import { ApiError } from "../utils/apiError.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { emitSocketEvent } from "../socket/socket.js";
+import { sendNotification } from "../utils/notification.js";
 import generateHash from "../utils/generateHash.js";
 import fs from "fs";
 
@@ -170,7 +171,7 @@ const sendMessage = asyncHandler(async(req, res) => {
             return res.status(500).json(new ApiError(500, "Internal server error"));
         }
 
-        chat.participants.forEach((participantObjectId) => {
+        chat.participants.forEach(async(participantObjectId) => {
             if (participantObjectId.toString() === userId.toString()) return;
 
             emitSocketEvent(
@@ -179,6 +180,7 @@ const sendMessage = asyncHandler(async(req, res) => {
                 ChatEventEnum.MESSAGE_RECEIVED_EVENT,
                 receivedMessage
             );
+            await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_SENT, receivedMessage);
         });
         console.log("done emit");
 
@@ -276,7 +278,7 @@ const sendMessagetoReply = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiError(500, "Internal server error"));
     }
 
-    chat.participants.forEach((participantObjectId) => {
+    chat.participants.forEach(async(participantObjectId) => {
         if (participantObjectId.toString() === userId.toString()) return;
 
         emitSocketEvent(
@@ -285,6 +287,8 @@ const sendMessagetoReply = asyncHandler(async (req, res) => {
             ChatEventEnum.MESSAGE_RECEIVED_EVENT,
             receivedMessage
         );
+
+        await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_REPLIED, receivedMessage);
     });
     console.log("done emit");
 

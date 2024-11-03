@@ -15,6 +15,7 @@ const chatSchema = new Schema(
             type: Boolean,
             default: false,
         },
+
         participants: [
             {
                 type: Schema.Types.ObjectId,
@@ -24,7 +25,7 @@ const chatSchema = new Schema(
         ],
 
         lastMessage: {
-            type: String,
+            type: Schema.Types.ObjectId,
             ref: "ChatMessage",
         },
 
@@ -35,6 +36,7 @@ const chatSchema = new Schema(
 
         manualTimestamp: {
             type: Date,
+            default: Date.now,
         },
 
         userBlocked: {

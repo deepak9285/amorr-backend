@@ -65,6 +65,7 @@ const  userSchema = new mongoose.Schema(
     milestones: [{ type: Schema.Types.ObjectId, ref: "UserMilestone" }],
     points: { type: Number, default: 0 },
     likes: [String],
+    matches : [String]
   },
   {
     timestamps: true,
