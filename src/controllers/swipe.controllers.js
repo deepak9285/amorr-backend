@@ -1,14 +1,14 @@
-import { User } from "../models/user.model.js"
+import { Profile } from "../models/profile.model.js"
 import { ApiResponse } from "../utils/apiResponse.js";
-const swipe = async(req,res) =>{
-    const { userId, targetUserId, action } = req.body;
+const swipe = async (req, res) => {
+    const { profileId, targetUserId, action } = req.body;
 
-    if (!userId || !targetUserId || !['like', 'dislike'].includes(action)) {
+    if (!profileId || !targetUserId || !['like', 'dislike'].includes(action)) {
         return res.json(new ApiResponse(404, null, 'invalid request'));
     }
-    const targetUser = await User.findById(targetUserId);
-    const user = await User.findById(userId);
-    
+    const targetUser = await Profile.findById(targetUserId);
+    const user = await Profile.findById(profileId);
+
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
     }
@@ -19,33 +19,33 @@ const swipe = async(req,res) =>{
     try {
 
         if (action === 'like') {
-            if(!user.likes.includes(targetUserId))
-            user.likes.push(targetUserId);
+            if (!user.likes.includes(targetUserId))
+                user.likes.push(targetUserId);
 
-            const likeExists =  targetUser.likes.includes(userId);
+            const likeExists = targetUser.likes.includes(profileId);
 
             if (likeExists) {
-                if(!user.matches.includes(targetUserId))
-                user.matches.push(targetUserId);
+                if (!user.matches.includes(targetUserId))
+                    user.matches.push(targetUserId);
                 await user.save();
 
-                if(!targetUser.matches.includes(userId))
-                targetUser.matches.push(userId);
+                if (!targetUser.matches.includes(profileId))
+                    targetUser.matches.push(profileId);
                 await targetUser.save();
 
                 return res.json(new ApiResponse(200, user, 'Its a match!'));
             }
-            else{
-                if(!user.likes.includes(targetUserId))
-                user.likes.push(targetUserId);
+            else {
+                if (!user.likes.includes(targetUserId))
+                    user.likes.push(targetUserId);
                 await user.save();
             }
         }
         return res.json(new ApiResponse(200, user, 'Swipe Recorded, no match!'));
     }
     catch (error) {
-        return res.json(new ApiResponse(500, null, 'Server error'));
+        return res.json(new ApiResponse(500, error, 'Server error'));
     }
 }
 
-export {swipe}
+export { swipe }

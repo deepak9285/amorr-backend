@@ -4,6 +4,16 @@ import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
+const tf = require('@tensorflow/tfjs');
+const use = require('@tensorflow-models/universal-sentence-encoder');
+
+let useModel;
+async function loadUSEModel() {
+  useModel = await use.load();
+  console.log("USE model loaded.");
+}
+loadUSEModel();
 
 const updateProfile = async (req, res) => {
   try {
@@ -11,7 +21,7 @@ const updateProfile = async (req, res) => {
       userID,
       profilePic,
       bio,
-      gender, 
+      gender,
       dob,
       lookingFor,
       height,
@@ -41,42 +51,6 @@ const updateProfile = async (req, res) => {
     if (!updatedProfile) return res.json(new ApiResponse(500, null, "Unable to update profile , due to unexpected error."));
 
     return res.json(new ApiResponse(200, updatedProfile, 'Profile updated'));
-
-  }
-  catch (err) {
-    return handleErr(res, err);
-  }
-}
-
-
-const fetch_by_preferences = async (req, res) => {
-  try {
-
-    const { userID } = req.body;
-    if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
-
-    const user = await UserPreferences.findOne({ userID });
-    if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
-
-    console.log('log from fetch_by_preferences controller: ', user);
-
-    const result = await UserPreferences.find({
-      "$or": [
-        { preferredGender: { $regex: user.preferredGender, $options: 'i' } },
-        { location: { $regex: user.location, $options: 'i' } },
-        {
-          ageRange: {
-            $gte: user.ageRange.min,
-            $lte: user.ageRange.max
-          }
-        },
-        { relationshipPreference: { $regex: user.relationshipPreference } }
-      ]
-    }).populate('userID');
-
-    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'no user found.'));
-
-    return res.json(new ApiResponse(200, result, 'Users fetched successfully.'));
 
   }
   catch (err) {
@@ -150,6 +124,56 @@ const calculateProfileCompleteness = async (req, res) => {
     return handleErr(res, err);
   }
 };
+
+
+const fetch_by_preferences = async (req, res) => {
+  try {
+
+    const { userID } = req.body;
+    if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+
+    const user = await UserPreferences.findOne({ userID });
+    if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
+
+    console.log('log from fetch_by_preferences controller: ', user);
+
+    const result = await UserPreferences.find({
+      "$or": [
+        { preferredGender: { $regex: user.preferredGender, $options: 'i' } },
+        { location: { $regex: user.location, $options: 'i' } },
+        {
+          ageRange: {
+            $gte: user.ageRange.min,
+            $lte: user.ageRange.max
+          }
+        },
+        { relationshipPreference: { $regex: user.relationshipPreference } }
+      ]
+    }).populate('userID');
+
+    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'no user found.'));
+
+    const scoredMatches = await Promise.all(
+      result.map(async match => {
+        const score = await calculateProfileSimilarity(user, match, useModel);
+        return { match, score };
+      })
+    );
+
+    scoredMatches.sort((a, b) => b.score - a.score);
+
+    const sortedMatches = scoredMatches.map(item => item.match);
+
+    if (!sortedMatches || sortedMatches.length === 0)
+      return res.json(new ApiResponse(404, null, 'No user found'));
+
+    return res.json(new ApiResponse(200, sortedMatches, 'preference match Users fetched successfully '));
+  }
+  catch (err) {
+    return handleErr(res, err);
+  }
+}
+
 
 export {
   updateProfile,

@@ -8,6 +8,7 @@ import { transporter } from "../utils/transporter.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from 'crypto';
 import { Profile } from "../models/profile.model.js";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -140,6 +141,17 @@ const loginUser = async (req, res) => {
     const loggedInUser = await User.findById(user._id).select(
       "-password -refreshToken"
     );
+
+    // const userProfie = await Profile.findOne({ userID: new mongoose.Types.ObjectId(loggedInUser._id) })
+    // console.log(userProfie)
+    // if (!userProfie) {
+    //   const newProfile = new Profile({
+    //     userID: loggedInUser._id,
+    //   });
+    // }
+    // if(userProfie.gender === null || userProfie.lookingFor === null || userProfie.location === '' || userProfie.dob === null || userProfie.relationshipPreference === null || userProfie.bio === '')
+    //   return res.json(new ApiResponse(409, null, 'Complete your profile setup first!'))
+
     return res
       .status(200)
       .cookie("refreshToken", refreshToken, options)
@@ -151,11 +163,9 @@ const loginUser = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  
+
   try {
-   console.log("start");
     const { username, email, password } = req.body;
-    console.log(username);
     if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
@@ -201,6 +211,9 @@ const register = async (req, res) => {
       relationshipPreference: null,
       likes: []
     });
+
+    newUser.profileID = newProfile._id;
+    await newUser.save();
 
     console.log("New User and Profile Created:", newUser, newProfile);
     return res.json(
