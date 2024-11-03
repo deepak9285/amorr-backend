@@ -9,7 +9,7 @@ import messRouter from "./routers/message.routers.js";
 import pointsRouter from "./routers/points.routers.js";
 import swipeRouter from './routers/swipe.routers.js'
 import { createServer } from "http";
-import setupSocketIO from "./socket/socket.js";
+import { setupSocketIO } from "./socket/socket.js";
 
 
 const app = express();
@@ -44,5 +44,5 @@ app.use("/api/profile", profileRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/message", messRouter);
 app.use("/api/points", pointsRouter);
-app.use( "/api/swipe",swipeRouter);
+app.use("/api/swipe", swipeRouter);
 export { httpServer };
