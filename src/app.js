@@ -9,14 +9,14 @@ import messRouter from "./routers/message.routers.js";
 import pointsRouter from "./routers/points.routers.js";
 import swipeRouter from './routers/swipe.routers.js'
 import { createServer } from "http";
-import setupSocketIO from "./socket/socket.js";
+// import setupSocketIO from "./socket/socket.js";
 
 
 const app = express();
 dotenv.config();
 const httpServer = createServer(app);
-const io = setupSocketIO(httpServer);
-app.set("io", io);
+// const io = setupSocketIO(httpServer);
+// app.set("io", io);
 
 app.get("/health", (req, res) => {
     res.send("Health OK");
