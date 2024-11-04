@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Profile } from "../models/profile.model.js"
 import { ApiResponse } from "../utils/apiResponse.js";
 const swipe = async (req, res) => {
@@ -6,7 +7,7 @@ const swipe = async (req, res) => {
     if (!profileId || !targetUserId || !['like', 'dislike'].includes(action)) {
         return res.json(new ApiResponse(404, null, 'invalid request'));
     }
-    const targetUser = await Profile.findById(targetUserId);
+    const targetUser = await Profile.findById({_id: new mongoose.Types.ObjectId(targetUserId)});
     const user = await Profile.findById(profileId);
 
     if (!user) {
@@ -41,7 +42,7 @@ const swipe = async (req, res) => {
                 await user.save();
             }
         }
-        return res.json(new ApiResponse(200, user, 'Swipe Recorded, no match!'));
+        return res.json(new ApiResponse(200, user, 'Swipe Recorded, no match!'));   
     }
     catch (error) {
         return res.json(new ApiResponse(500, error, 'Server error'));
