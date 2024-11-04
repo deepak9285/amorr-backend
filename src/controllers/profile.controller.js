@@ -118,17 +118,15 @@ const calculateProfileCompleteness = async (req, res) => {
   }
 };
 
-
 const fetch_by_preferences = async (req, res) => {
   try {
-
     const { userID } = req.body;
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
-    const user = await UserPreferences.findOne({ userID });
-    if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
+    const user = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+    if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
 
-    console.log('log from fetch_by_preferences controller: ', user);
+    console.log('User found:', user);
 
     const result = await UserPreferences.find({
       "$or": [
@@ -140,37 +138,65 @@ const fetch_by_preferences = async (req, res) => {
             $lte: user.ageRange.max
           }
         },
-        { relationshipPreference: { $regex: user.relationshipPreference } }
+        { relationshipPreference: { $regex: user.relationshipPreference, $options: 'i' } }
       ]
-    }).populate('userID');
+    }).populate('user');
 
-    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'no user found.'));
+    console.log('Matching users found:', result);
+
+    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'No user found.'));
 
     const scoredMatches = await Promise.all(
       result.map(async match => {
-        const score = await calculateProfileSimilarity(user, match);
-        return { match, score };
+        try {
+          const score = await calculateProfileSimilarity(user, match);
+          return { match, score };
+        } catch (error) {
+          console.error('Error calculating similarity:', error);
+          return null; // Skip this match if there's an error
+        }
       })
     );
 
-    scoredMatches.sort((a, b) => b.score - a.score);
+    // Filter out any null results caused by errors in calculateProfileSimilarity
+    const validMatches = scoredMatches.filter(item => item !== null);
 
-    const sortedMatches = scoredMatches.map(item => item.match);
+    // Sort by score in descending order
+    validMatches.sort((a, b) => b.score - a.score);
 
-    if (!sortedMatches || sortedMatches.length === 0)
+    // Return both match and score in the response
+    if (!validMatches || validMatches.length === 0)
       return res.json(new ApiResponse(404, null, 'No user found'));
 
-    return res.json(new ApiResponse(200, sortedMatches, 'preference match Users fetched successfully '));
+    return res.json(new ApiResponse(200, validMatches, 'Preference match users fetched successfully'));
+  }
+  catch (err) {
+    console.error('Error in fetch_by_preferences:', err);
+    return handleErr(res, err);
+  }
+};
+
+
+
+const fetch_by_id = async (req, res) => {
+  try {
+    const { profileID } = req.body;
+    if (!profileID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+
+    const profile = await Profile.findById({ _id: new mongoose.Types.ObjectId(profileID) });
+    if (!profile) return res.json(new ApiResponse(404, null, 'profile not found.'));
+
+    return res.json(new ApiResponse(200, profile, 'profile fetched successfully.'));
   }
   catch (err) {
     return handleErr(res, err);
   }
 }
 
-
 export {
   updateProfile,
   fetch_by_preferences,
   like_profile,
-  calculateProfileCompleteness
+  calculateProfileCompleteness,
+  fetch_by_id
 }
