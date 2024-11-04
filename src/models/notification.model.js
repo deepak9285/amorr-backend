@@ -4,23 +4,19 @@ const notificationSchema = new Schema(
     {
         type: {
             type: String,
-            required: true,
-            enum: ["message", "like", "mention"],
+            enum: ["message", "like", "mention","reply"],
         },
         recipient: {
             type: Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
         sender: {
             type: Schema.Types.ObjectId,
             ref: "User",
-            required: true,
         },
         chat: {
             type: Schema.Types.ObjectId,
             ref: "Chat",
-            required: true,
         },
         message: {
             type: Schema.Types.ObjectId,
