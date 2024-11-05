@@ -40,12 +40,22 @@ const ProfileSchema = new mongoose.Schema({
       ref: 'User'
     }
   ],
+  dislikes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  ],
   matches: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     }
   ],
+  preferredProfiles:[  {
+    match: { type: Schema.Types.ObjectId, ref: 'User' },
+    score: { type: Number, required: true }
+  }],
   userPhotos: [
     {
       label: {
