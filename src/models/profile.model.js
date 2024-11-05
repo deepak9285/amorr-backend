@@ -7,12 +7,12 @@ const ProfileSchema = new mongoose.Schema({
   userID: { type: Schema.Types.ObjectId, ref: 'User' },
   profileHash: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
   },
   amorrID: {
     type: String,
-    required: true,
+    required: false,
     unique: true
   },
   profilePic: { type: String },
@@ -32,7 +32,7 @@ const ProfileSchema = new mongoose.Schema({
   },
   relationshipPreference: {
     type: String,
-    enum: ['Life Long partner', 'Long Term Relationship', 'Short Term Relationship', 'Friship & Connection', 'Situationship', 'Something casual']
+    enum: ['Life Long partner', 'Long Term Relationship', 'Short Term Relationship', 'Friendship & Connection', 'Situationship', 'Something casual']
   },
   likes: [
     {
@@ -69,7 +69,7 @@ const ProfileSchema = new mongoose.Schema({
   ],
   promptsAnswers: [
     {
-      prompt:String,
+      prompt: String,
       ans: String
     }
   ],

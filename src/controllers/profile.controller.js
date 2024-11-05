@@ -4,6 +4,9 @@ import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
+// const tf = require('@tensorflow/tfjs');
+// const use = require('@tensorflow-models/universal-sentence-encoder');
 import { Match } from "../models/score.model.js";
 
 const updateProfile = async (req, res) => {
@@ -116,17 +119,15 @@ const calculateProfileCompleteness = async (req, res) => {
   }
 };
 
-
 const fetch_by_preferences = async (req, res) => {
   try {
-
     const { userID } = req.body;
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
-    const user = await UserPreferences.findOne({ userID });
-    if (!user) return res.json(new ApiResponse(404, null, 'user not found.'));
+    const user = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+    if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
 
-    console.log('log from fetch_by_preferences controller: ', user);
+    console.log('User found:', user);
 
     const result = await UserPreferences.find({
       "$or": [
@@ -138,30 +139,59 @@ const fetch_by_preferences = async (req, res) => {
             $lte: user.ageRange.max
           }
         },
-        { relationshipPreference: { $regex: user.relationshipPreference } }
+        { relationshipPreference: { $regex: user.relationshipPreference, $options: 'i' } }
       ]
-    }).populate('userID');
+    }).populate('user');
 
-    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'no user found.'));
+    console.log('Matching users found:', result);
+
+    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'No user found.'));
 
     const scoredMatches = await Promise.all(
       result.map(async match => {
-          const score = await calculateProfileSimilarity(user, match, UserPreferences);
+        try {
+          const score = await calculateProfileSimilarity(user, match);
           return { match, score };
+        } catch (error) {
+          console.error('Error calculating similarity:', error);
+          return null; // Skip this match if there's an error
+        }
       })
     );
-    
-    scoredMatches.sort((a, b) => b.score - a.score);
 
-    user.preferredProfiles = scoredMatches;
+    // Filter out any null results caused by errors in calculateProfileSimilarity
+    const validMatches = scoredMatches.filter(item => item !== null);
+
+    // Sort by score in descending order
+    validMatches.sort((a, b) => b.score - a.score);
+
+    //saving scores in db 
+    user.preferredProfiles = validMatches;
     await user.save();
-    
-    const sortedMatches = scoredMatches.map(item => item.match);
-    
-    if (!sortedMatches || sortedMatches.length === 0) 
-    return res.json(new ApiResponse(404, null, 'No user found'));
-    
-    return res.json(new ApiResponse(200, user.preferredProfiles, 'preference match Users fetched successfully '));    
+
+    // Return both match and score in the response
+    if (!validMatches || validMatches.length === 0)
+      return res.json(new ApiResponse(404, null, 'No user found'));
+
+    return res.json(new ApiResponse(200, validMatches, 'Preference match users fetched successfully'));
+  }
+  catch (err) {
+    console.error('Error in fetch_by_preferences:', err);
+    return handleErr(res, err);
+  }
+};
+
+
+
+const fetch_by_id = async (req, res) => {
+  try {
+    const { profileID } = req.body;
+    if (!profileID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+
+    const profile = await Profile.findById({ _id: new mongoose.Types.ObjectId(profileID) });
+    if (!profile) return res.json(new ApiResponse(404, null, 'profile not found.'));
+
+    return res.json(new ApiResponse(200, profile, 'profile fetched successfully.'));
   }
   catch (err) {
     return handleErr(res, err);
@@ -233,5 +263,6 @@ export {
   fetch_by_preferences,
   fetchProfilebyId,
   like_profile,
-  calculateProfileCompleteness
+  calculateProfileCompleteness,
+  fetch_by_id
 }

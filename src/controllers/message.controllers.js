@@ -3,14 +3,13 @@ import { User } from "../models/user.model.js";
 import { ChatMessage } from "../models/message.model.js";
 import { Chat } from "../models/chat.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
-import { ApiError, handleErr } from "../utils/apiError.js";
+import { ApiError } from "../utils/apiError.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
-import fs from "fs";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { emitSocketEvent } from "../socket/socket.js";
+import { sendNotification, MessageEventTypes } from "../utils/notification.js";
 import generateHash from "../utils/generateHash.js";
-
-const emitSocketEvent = (req, roomId, event, payload) => {
-    req.app.get("io").in(roomId).emit(event, payload);
-};
+import fs from "fs";
 
 const getStaticFilePath = (req, fileName) => {
     return `${req.protocol}://${req.get("host")}/images/${fileName}`;
@@ -29,8 +28,77 @@ const removeLocalFile = (localPath) => {
     });
 };
 
-const sendMessage = async (req, res) => {
-    try {
+const getAllMessagesofChat =asyncHandler (async (req, res) => {
+    const { chatId } = req.params;
+
+    const selectedChat = await Chat.findById(chatId);
+    if (!selectedChat) {
+        return res.status(404).json(new ApiError(404, "Chat does not exist"));
+    }
+
+    const userId = req.headers['user-id'];
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User ID is required"));
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
+    req.user = user;
+
+    if (!selectedChat.participants?.includes(req.user._id)) {
+        return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
+    }
+
+    const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false })
+        .sort({ msg_timestamp: -1 })
+        .populate("msg_sender_amorr_id", "username")
+        .populate("msg_conversation_hash", "name isGroup");
+
+    const textMessages = messages.map(message => ({
+        id: message._id,
+        text: message.msg_text,
+        sender: message.msg_sender_amorr_id.username,
+        timestamp: message.msg_timestamp,
+        mediaUrl: message.msg_mediaUrl,
+    }));
+
+    return res.status(200).json(new ApiResponse(200, textMessages, "Messages fetched successfully"));
+
+});
+
+const getUserConvfromGroup = asyncHandler(async (req, res) => {
+    const { chatId } = req.params;
+
+    const selectedChat = await Chat.findById(chatId);
+    if (!selectedChat) {
+        return res.status(404).json(new ApiError(404, "Chat does not exist"));
+    }
+
+    const userId = req.headers['user-id'];
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User ID is required"));
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
+    req.user = user;
+
+    if (!selectedChat.participants?.includes(req.user._id)) {
+        return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
+    }
+
+    const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false, msg_sender_amorr_id: req.user._id })
+        .sort({ msg_timestamp: -1 })
+        .populate("msg_sender_amorr_id", "username");
+
+    return res.status(200).json(new ApiResponse(200, messages || [], "Messages fetched successfully"));
+});
+
+const sendMessage = asyncHandler(async(req, res) => {
         const { chatId } = req.params;
         const { content } = req.body;
         const userId = req.headers['user-id'];
@@ -103,7 +171,7 @@ const sendMessage = async (req, res) => {
             return res.status(500).json(new ApiError(500, "Internal server error"));
         }
 
-        chat.participants.forEach((participantObjectId) => {
+        chat.participants.forEach(async(participantObjectId) => {
             if (participantObjectId.toString() === userId.toString()) return;
 
             emitSocketEvent(
@@ -112,6 +180,7 @@ const sendMessage = async (req, res) => {
                 ChatEventEnum.MESSAGE_RECEIVED_EVENT,
                 receivedMessage
             );
+            await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_SENT, receivedMessage);
         });
         console.log("done emit");
 
@@ -119,60 +188,116 @@ const sendMessage = async (req, res) => {
             .status(201)
             .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
 
-    } catch (err) {
-        console.error("Error in sendMessage:", err);
-        return handleErr(res, err);
+    
+});
+
+const sendMessagetoReply = asyncHandler(async (req, res) => {
+    const { chatId, replyTo } = req.params;
+    const { content } = req.body;
+    const userId = req.headers['user-id'];
+
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User ID is required"));
     }
-};
 
-
-const getAllMessagesofChat = async (req, res) => {
-    try {
-        const { chatId } = req.params;
-
-        const selectedChat = await Chat.findById(chatId);
-        if (!selectedChat) {
-            return res.status(404).json(new ApiError(404, "Chat does not exist"));
-        }
-
-        const userId = req.headers['user-id'];
-        if (!userId) {
-            return res.status(401).json(new ApiError(401, "User ID is required"));
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found"));
-        }
-        req.user = user;
-
-        if (!selectedChat.participants?.includes(req.user._id)) {
-            return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
-        }
-
-        const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false })
-            .sort({ msg_timestamp: -1 })
-            .populate("msg_sender_amorr_id", "username")
-            .populate("msg_conversation_hash", "name isGroup");
-
-        const textMessages = messages.map(message => ({
-            id: message._id,
-            text: message.msg_text,
-            sender: message.msg_sender_amorr_id.username,
-            timestamp: message.msg_timestamp,
-            mediaUrl: message.msg_mediaUrl,
-        }));
-
-        return res.status(200).json(new ApiResponse(200, textMessages, "Messages fetched successfully"));
-    } catch (err) {
-        console.error("Error in getAllMessages:", err);
-        return handleErr(res, err);
+    if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json(new ApiError(400, "Invalid User ID format"));
     }
-};
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
+
+    if (!content && !(req.files?.attachments?.length > 0)) {
+        return res.status(400).json(new ApiError(400, "Message content or attachment is required"));
+    }
+
+    const selectedChat = await Chat.findById(chatId);
+    if (!selectedChat) {
+        return res.status(404).json(new ApiError(404, "Chat does not exist"));
+    }
+
+    const messageFiles = [];
+    if (req.files && req.files.attachments?.length > 0) {
+        req.files.attachments.map((attachment) => {
+            messageFiles.push({
+                url: getStaticFilePath(req, attachment.filename),
+                localPath: getLocalPath(attachment.filename),
+            });
+        });
+    }
+
+    const msgId = await generateHash(`${chatId}-${userId}-${Date.now()}`);
+
+    let replyFields = {};
+
+    if (replyTo) {
+        const originalMessage = await ChatMessage.findById(replyTo);
+        if (originalMessage) {
+            replyFields = {
+                msg_reply_status: true,
+                msg_reply_hash: originalMessage._id,
+                msg_reply_title: originalMessage.msg_text.slice(0, 30),
+                msg_reply_text: originalMessage.msg_text,
+                msg_reply_user_dhondi_id: originalMessage.msg_sender_amorr_id,
+                msg_reply_color: "#FFD700",
+            };
+        }
+    }
+
+    const message = await ChatMessage.create({
+        msg_hash: msgId,
+        msg_conversation_hash: chatId,
+        msg_sender_amorr_id: userId,
+        msg_timestamp: Date.now(),
+        msg_added_time: Date.now(),
+        msg_updated_time: Date.now(),
+        msg_sent_status: true,
+        msg_deleted_status: false,
+        msg_text: content || "",
+        msg_mediaUrl: messageFiles,
+        ...replyFields,
+    });
+
+    const chat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set: {
+                lastMessage: message._id,
+            },
+        },
+        { new: true }
+    );
+
+    const receivedMessage = await ChatMessage.findById(message._id)
+        .populate("msg_sender_amorr_id", "isOnline username")
+        .populate("msg_conversation_hash", "name isGroup userBlocked lastMessage");
+
+    if (!receivedMessage) {
+        return res.status(500).json(new ApiError(500, "Internal server error"));
+    }
+
+    chat.participants.forEach(async(participantObjectId) => {
+        if (participantObjectId.toString() === userId.toString()) return;
+
+        emitSocketEvent(
+            req,
+            participantObjectId.toString(),
+            ChatEventEnum.MESSAGE_RECEIVED_EVENT,
+            receivedMessage
+        );
+
+        await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_REPLIED, receivedMessage);
+    });
+    console.log("done emit");
+
+    return res.status(201).json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
 
 
-const deleteMessage = async (req, res) => {
-    try {
+});
+
+const deleteMessage = asyncHandler(async (req, res) => {
         const { chatId, messageId } = req.params;
 
         const userId = req.headers['user-id'];
@@ -237,161 +362,13 @@ const deleteMessage = async (req, res) => {
         });
 
         return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
-    } catch (err) {
-        console.error("Error in deleteMessage:", err);
-        return handleErr(res, err);
-    }
-};
-
-
-const sendMessagetoReply = async (req, res) => {
-    try {
-        const { chatId, replyTo } = req.params;
-        const { content } = req.body;
-        const userId = req.headers['user-id'];
-
-        if (!userId) {
-            return res.status(401).json(new ApiError(401, "User ID is required"));
-        }
-
-        if (!mongoose.isValidObjectId(userId)) {
-            return res.status(400).json(new ApiError(400, "Invalid User ID format"));
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found"));
-        }
-
-        if (!content && !(req.files?.attachments?.length > 0)) {
-            return res.status(400).json(new ApiError(400, "Message content or attachment is required"));
-        }
-
-        const selectedChat = await Chat.findById(chatId);
-        if (!selectedChat) {
-            return res.status(404).json(new ApiError(404, "Chat does not exist"));
-        }
-
-        const messageFiles = [];
-        if (req.files && req.files.attachments?.length > 0) {
-            req.files.attachments.map((attachment) => {
-                messageFiles.push({
-                    url: getStaticFilePath(req, attachment.filename),
-                    localPath: getLocalPath(attachment.filename),
-                });
-            });
-        }
-
-        const msgId = await generateHash(`${chatId}-${userId}-${Date.now()}`);
-
-        let replyFields = {};
-
-        if (replyTo) {
-            const originalMessage = await ChatMessage.findById(replyTo);
-            if (originalMessage) {
-                replyFields = {
-                    msg_reply_status: true,
-                    msg_reply_hash: originalMessage._id,
-                    msg_reply_title: originalMessage.msg_text.slice(0, 30),
-                    msg_reply_text: originalMessage.msg_text,
-                    msg_reply_user_dhondi_id: originalMessage.msg_sender_amorr_id,
-                    msg_reply_color: "#FFD700",
-                };
-            }
-        }
-
-        const message = await ChatMessage.create({
-            msg_hash: msgId,
-            msg_conversation_hash: chatId,
-            msg_sender_amorr_id: userId,
-            msg_timestamp: Date.now(),
-            msg_added_time: Date.now(),
-            msg_updated_time: Date.now(),
-            msg_sent_status: true,
-            msg_deleted_status: false,
-            msg_text: content || "",
-            msg_mediaUrl: messageFiles,
-            ...replyFields,
-        });
-
-        const chat = await Chat.findByIdAndUpdate(
-            chatId,
-            {
-                $set: {
-                    lastMessage: message._id,
-                },
-            },
-            { new: true }
-        );
-
-        const receivedMessage = await ChatMessage.findById(message._id)
-            .populate("msg_sender_amorr_id", "isOnline username")
-            .populate("msg_conversation_hash", "name isGroup userBlocked lastMessage");
-
-        if (!receivedMessage) {
-            return res.status(500).json(new ApiError(500, "Internal server error"));
-        }
-
-        chat.participants.forEach((participantObjectId) => {
-            if (participantObjectId.toString() === userId.toString()) return;
-
-            emitSocketEvent(
-                req,
-                participantObjectId.toString(),
-                ChatEventEnum.MESSAGE_RECEIVED_EVENT,
-                receivedMessage
-            );
-        });
-        console.log("done emit");
-
-        return res.status(201).json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
-
-    } catch (err) {
-        console.error("Error in sendMessage:", err);
-        return handleErr(res, err);
-    }
-};
-
-const getUserConvfromGroup = async (req, res) => {
-    try {
-        const { chatId } = req.params;
-
-        const selectedChat = await Chat.findById(chatId);
-        if (!selectedChat) {
-            return res.status(404).json(new ApiError(404, "Chat does not exist"));
-        }
-
-        const userId = req.headers['user-id'];
-        if (!userId) {
-            return res.status(401).json(new ApiError(401, "User ID is required"));
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found"));
-        }
-        req.user = user;
-
-        if (!selectedChat.participants?.includes(req.user._id)) {
-            return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
-        }
-
-        const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false,msg_sender_amorr_id: req.user._id })
-            .sort({ msg_timestamp: -1 })
-            .populate("msg_sender_amorr_id", "username");
-
-        return res.status(200).json(new ApiResponse(200, messages || [], "Messages fetched successfully"));
-    } catch (err) {
-        console.error("Error in getUsersConvfromGroup:", err);
-        return handleErr(res, err);
-    }
-};
-
+   
+});
 
 export {
-    sendMessage,
     getAllMessagesofChat,
     getUserConvfromGroup,
-    deleteMessage,
-    sendMessagetoReply
+    sendMessage,
+    sendMessagetoReply,
+    deleteMessage
 };
