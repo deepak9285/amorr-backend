@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { Match } from "../models/score.model.js";
 
 const updateProfile = async (req, res) => {
   try {
@@ -151,13 +152,16 @@ const fetch_by_preferences = async (req, res) => {
     );
     
     scoredMatches.sort((a, b) => b.score - a.score);
+
+    user.preferredProfiles = scoredMatches;
+    await user.save();
     
     const sortedMatches = scoredMatches.map(item => item.match);
     
     if (!sortedMatches || sortedMatches.length === 0) 
     return res.json(new ApiResponse(404, null, 'No user found'));
     
-    return res.json(new ApiResponse(200, sortedMatches, 'preference match Users fetched successfully '));    
+    return res.json(new ApiResponse(200, user.preferredProfiles, 'preference match Users fetched successfully '));    
   }
   catch (err) {
     return handleErr(res, err);
@@ -207,9 +211,27 @@ async function calculateProfileSimilarity(profile1, profile2, model) {
 
 
 
+const fetchProfilebyId = async(req,res)=>{
+  const {profileId} = req.body;
+
+  try{
+  const user = await Profile.findById(profileId);
+  if (!user)
+    return res.status(404).json(new ApiResponse(404, null, "Profile not found"));
+  
+  return res.json(new ApiResponse(200,user,"profile fetched successfully"))
+  }
+  catch (err) {
+    return handleErr(res, err);
+  }
+}
+
+
+
 export {
   updateProfile,
   fetch_by_preferences,
+  fetchProfilebyId,
   like_profile,
   calculateProfileCompleteness
 }

@@ -19,12 +19,17 @@ const swipe = async (req, res) => {
     try {
 
         if (action === 'like') {
+
             if (!user.likes.includes(targetUserId))
                 user.likes.push(targetUserId);
 
             const likeExists = targetUser.likes.includes(profileId);
 
             if (likeExists) {
+               //saving the matches
+                 const newMatch = new Match({ userId1: profileId, userId2: targetUserId });
+                 await newMatch.save();
+
                 if (!user.matches.includes(targetUserId))
                     user.matches.push(targetUserId);
                 await user.save();
@@ -36,10 +41,16 @@ const swipe = async (req, res) => {
                 return res.json(new ApiResponse(200, user, 'Its a match!'));
             }
             else {
+                //saving the likes
                 if (!user.likes.includes(targetUserId))
                     user.likes.push(targetUserId);
-                await user.save();
+                    await user.save();
             }
+        }
+        else{
+            if (!user.dislikes.includes(targetUserId))
+            user.dislikes.push(targetUserId);
+            await user.save();
         }
         return res.json(new ApiResponse(200, user, 'Swipe Recorded, no match!'));
     }
