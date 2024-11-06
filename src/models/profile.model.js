@@ -48,11 +48,22 @@ const ProfileSchema = new mongoose.Schema({
   ],
   matches: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      senderID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      recieverID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected'],
+        default: 'pending'
+      }
     }
   ],
-  preferredProfiles:[  {
+  preferredProfiles: [{
     match: { type: Schema.Types.ObjectId, ref: 'User' },
     score: { type: Number, required: true }
   }],
