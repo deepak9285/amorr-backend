@@ -7,6 +7,7 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
 // const tf = require('@tensorflow/tfjs');
 // const use = require('@tensorflow-models/universal-sentence-encoder');
+import { Match } from "../models/Match.model.js";
 
 const updateProfile = async (req, res) => {
   try {
@@ -78,6 +79,19 @@ const like_profile = async (req, res) => {
 
 const dislike_profile = async (req, res) => {
   try {
+    const { userID, profileID } = req.body;  // profileID: profile to be liked and userID: user which is liking the profile.
+    if (!userID || !profileID) return res.json(new ApiResponse(400, null, 'userID or profileID not provided.'))
+
+    const profile = await Profile.findById(profileID);
+    const user = await User.findById(userID);
+
+    if (!user || !profile) return res.json(new ApiResponse(404, null, 'Data not found.'));
+
+    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $pull: { likes: { userID } } }, { new: true });
+
+    if (!updatedProfile) return res.json(new ApiResponse(500, 'unable to dislike the profile.'));
+
+    return res.json(new ApiResponse(200, updatedProfile, 'profile disliked'));
 
   }
   catch (err) {
@@ -164,11 +178,15 @@ const fetch_by_preferences = async (req, res) => {
     // Sort by score in descending order
     validMatches.sort((a, b) => b.score - a.score);
 
+    //saving scores in db 
+    user.preferredProfiles = validMatches;
+    await user.save();
+
     // Return both match and score in the response
     if (!validMatches || validMatches.length === 0)
       return res.json(new ApiResponse(404, null, 'No user found'));
 
-    return res.json(new ApiResponse(200, validMatches, 'Preference match users fetched successfully'));
+    return res.json(new ApiResponse(200, user.preferredProfiles, 'Preference match users fetched successfully'));
   }
   catch (err) {
     console.error('Error in fetch_by_preferences:', err);
@@ -196,7 +214,9 @@ const fetch_by_id = async (req, res) => {
 export {
   updateProfile,
   fetch_by_preferences,
+  // fetchProfilebyId,
   like_profile,
+  dislike_profile,
   calculateProfileCompleteness,
   fetch_by_id
 }

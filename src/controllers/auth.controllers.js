@@ -303,6 +303,26 @@ const forgetPassword = async (req, res) => {
   }
 }
 
+const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.json(new ApiResponse(400, null, 'UserID not provided.'));
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.json(new ApiResponse(404, null, 'User not found.'));
+    }
+
+    return res.json(new ApiResponse(200, user, 'User fetched successfully.'));
+  } catch (err) {
+    return handleErr(res, err);
+  }
+};
+
 
 export {
   loginUser,
@@ -310,5 +330,6 @@ export {
   sendEmailOtp,
   verifyEmailOtp,
   forgetPassword,
-  sendForgetPasswordMail
+  sendForgetPasswordMail,
+  getUserById
 }

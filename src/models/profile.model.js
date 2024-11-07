@@ -40,12 +40,33 @@ const ProfileSchema = new mongoose.Schema({
       ref: 'User'
     }
   ],
-  matches: [
+  dislikes: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     }
   ],
+  matches: [
+    {
+      senderID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      recieverID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected'],
+        default: 'pending'
+      }
+    }
+  ],
+  preferredProfiles: [{
+    match: { type: Schema.Types.ObjectId, ref: 'User' },
+    score: { type: Number, required: true }
+  }],
   userPhotos: [
     {
       label: {
