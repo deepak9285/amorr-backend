@@ -12,7 +12,7 @@ const swipe = async(req,res) =>{
         return res.status(404).json({ message: 'User not found' });
     }
     try {
-        if (action === 'like') {
+        if (action === "like") {
             const likeExists =  user.likes.includes(targetUserId);
             if (likeExists) {
                 const newMatch = new Match({ userId1: userId, userId2: targetUserId });
