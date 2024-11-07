@@ -53,7 +53,6 @@ const updateUserPreference = asyncHandler(async (req, res) => {
 
 const deleteUserPreference = asyncHandler(async (req, res) => {
     const { id } = req.params;
-
     const deletedPreference = await UserPreferences.findByIdAndDelete(id);
 
     if (!deletedPreference) {
