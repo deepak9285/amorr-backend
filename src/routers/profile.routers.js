@@ -4,7 +4,7 @@ import { uploadFile } from "../utils/aws.js";
 
 const router = Router();
 
-router.route("/update").patch(updateProfile);
+router.route("/update").post(updateProfile);
 router.route("/fetch/preference").post(fetch_by_preferences);
 router.route("/like").post(like_profile);
 router.route("/profile/completeness").post(calculateProfileCompleteness);
