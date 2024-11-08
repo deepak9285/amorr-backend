@@ -8,6 +8,7 @@ import { transporter } from "../utils/transporter.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from 'crypto';
 import { Profile } from "../models/profile.model.js";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -115,7 +116,6 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
-    console.log("start");
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -141,6 +141,17 @@ const loginUser = async (req, res) => {
     const loggedInUser = await User.findById(user._id).select(
       "-password -refreshToken"
     );
+
+    // const userProfie = await Profile.findOne({ userID: new mongoose.Types.ObjectId(loggedInUser._id) })
+    // console.log(userProfie)
+    // if (!userProfie) {
+    //   const newProfile = new Profile({
+    //     userID: loggedInUser._id,
+    //   });
+    // }
+    // if(userProfie.gender === null || userProfie.lookingFor === null || userProfie.location === '' || userProfie.dob === null || userProfie.relationshipPreference === null || userProfie.bio === '')
+    //   return res.json(new ApiResponse(409, null, 'Complete your profile setup first!'))
+
     return res
       .status(200)
       .cookie("refreshToken", refreshToken, options)
@@ -152,11 +163,9 @@ const loginUser = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  
+
   try {
-   console.log("start");
     const { username, email, password } = req.body;
-    console.log(username);
     if (!username || !email || !password) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
@@ -187,9 +196,6 @@ const register = async (req, res) => {
       userHash
     });
     console.log(newUser);
-    //console.log("end");
-
-    // user profile
     const newProfile = await Profile.create({
       userID: newUser._id,
       profileHash: profileHash,
@@ -204,6 +210,9 @@ const register = async (req, res) => {
       relationshipPreference: null,
       likes: []
     });
+
+    newUser.profileID = newProfile._id;
+    await newUser.save();
 
     console.log("New User and Profile Created:", newUser, newProfile);
     return res.json(
@@ -293,6 +302,26 @@ const forgetPassword = async (req, res) => {
   }
 }
 
+const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.json(new ApiResponse(400, null, 'UserID not provided.'));
+    }
+
+    const user = await User.findById({userId});
+
+    if (!user) {
+      return res.json(new ApiResponse(404, null, 'User not found.'));
+    }
+
+    return res.json(new ApiResponse(200, user, 'User fetched successfully.'));
+  } catch (err) {
+    return handleErr(res, err);
+  }
+};
+
 
 export {
   loginUser,
@@ -300,5 +329,6 @@ export {
   sendEmailOtp,
   verifyEmailOtp,
   forgetPassword,
-  sendForgetPasswordMail
+  sendForgetPasswordMail,
+  getUserById
 }
