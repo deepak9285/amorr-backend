@@ -201,6 +201,7 @@ const register = async (req, res) => {
       userID: newUser._id,
       profileHash: profileHash,
       amorrID: amorrID,
+      userName: username,
       profilePic: "",
       bio: "",
       gender: null,
