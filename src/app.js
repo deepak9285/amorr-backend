@@ -7,7 +7,6 @@ import profileRouter from "./routers/profile.routers.js";
 import chatRouter from "./routers/chat.routers.js";
 import messRouter from "./routers/message.routers.js";
 import notiRouter from "./routers/notification.routers.js";
-import userPreferenceRouter from "./routers/userPreference.routers.js";
 import pointsRouter from "./routers/points.routers.js";
 import swipeRouter from './routers/swipe.routers.js'
 import { createServer } from "http";
@@ -18,7 +17,7 @@ const app = express();
 dotenv.config();
 const httpServer = createServer(app);
 const io = setupSocketIO(httpServer);
-app.set("io", io);
+app.set("io", io); 
 
 app.get("/health", (req, res) => {
     res.send("Health OK");
@@ -62,8 +61,6 @@ app.use("/api/profile", profileRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/message", messRouter);
 app.use("/api/notification", notiRouter);
-app.use("/api/preference", userPreferenceRouter);
 app.use("/api/points", pointsRouter);
 app.use("/api/swipe", swipeRouter);
-
 export { httpServer };

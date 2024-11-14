@@ -2,6 +2,97 @@ import mongoose from "mongoose";
 import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 
+// const swipe = async (req, res) => {
+//     const { profileID, targetUserId, action } = req.body;
+
+//     if (!profileID || !targetUserId || !['like', 'dislike'].includes(action)) {
+//         return res.json(new ApiResponse(404, null, 'Invalid request'));
+//     }
+//     if (profileID === targetUserId) {
+//         return res.json(new ApiResponse(400, null, 'You cannot swipe on yourself'));
+//     }
+
+//     try {
+//         const targetUser = await Profile.findById({ _id: new mongoose.Types.ObjectId(targetUserId) });
+//         const user = await Profile.findById(profileID);
+
+//         if (!user) {
+//             return res.status(404).json(new ApiResponse(404, null, 'User not found'));
+//         }
+//         if (!targetUser) {
+//             return res.status(404).json(new ApiResponse(404, null, 'Target user not found'));
+//         }
+
+//         // Check if a match already exists
+//         const existingMatchForUser = user.matches.find(
+//             match => match.senderID.equals(targetUserId) && match.recieverID.equals(profileID)
+//         );
+
+//         const existingMatchForTargetUser = targetUser.matches.find(
+//             match => match.senderID.equals(targetUserId) && match.recieverID.equals(profileID)
+//         );
+
+//         if (existingMatchForUser || existingMatchForTargetUser) {
+//             if (existingMatchForUser) {
+//                 console.log("existingMatchForUser")
+//                 existingMatchForUser.status = 'accepted';
+//                 existingMatchForTargetUser.status = 'accepted';
+//             }
+            
+//             if (existingMatchForTargetUser) {
+//                 console.log("existingMatchForTargetUser")
+//                 existingMatchForUser.status = 'accepted';
+//                 existingMatchForTargetUser.status = 'accepted';
+//             }
+
+//             user.markModified('matches');
+//             targetUser.markModified('matches');
+
+//             await user.save();
+//             await targetUser.save();
+
+//             return res.json(new ApiResponse(200, {message: "matched"}, 'Match accepted'));
+//         } else {
+//             // Create a match request with `pending` status for both profiles
+
+//             // Record the action (like or dislike) for the swipe in the initiating user's profile
+//             user.matches.push({
+//                 senderID: profileID,
+//                 recieverID: targetUserId,
+//                 status: 'pending',
+//             });
+
+//             targetUser.matches.push({
+//                 senderID: profileID,
+//                 recieverID: targetUserId,
+//                 status: 'pending',
+//             });
+
+//             user.markModified('matches');
+//             targetUser.markModified('matches');
+
+//             await user.save();
+//             await targetUser.save();
+
+//             if (action === 'like' && !user.likes.includes(targetUserId)) {
+//                 user.likes.push(targetUserId);
+//             } else if (action === 'dislike' && !user.dislikes.includes(targetUserId)) {
+//                 user.dislikes.push(targetUserId);
+//             }
+
+//             user.markModified('likes');
+//             user.markModified('dislikes');
+//             await user.save();
+
+//             return res.json(new ApiResponse(200, user, 'Swipe recorded, match requests created with pending status.'));
+//         }
+//     } catch (error) {
+//         console.error("Error in swipe API:", error);
+//         return res.json(new ApiResponse(500, error.message || error, 'Server error'));
+//     }
+// };
+
+
 const swipe = async (req, res) => {
     const { profileID, targetUserId, action } = req.body;
 
@@ -13,8 +104,8 @@ const swipe = async (req, res) => {
     }
 
     try {
-        const targetUser = await Profile.findById({ _id: new mongoose.Types.ObjectId(targetUserId) });
         const user = await Profile.findById(profileID);
+        const targetUser = await Profile.findById(targetUserId);
 
         if (!user) {
             return res.status(404).json(new ApiResponse(404, null, 'User not found'));
@@ -23,26 +114,14 @@ const swipe = async (req, res) => {
             return res.status(404).json(new ApiResponse(404, null, 'Target user not found'));
         }
 
-        // Check if a match already exists
-        const existingMatchForUser = user.matches.find(
-            match => match.recieverID.equals(targetUserId)
-        );
+        // Check if a match already exists in both profiles
+        const userMatchIndex = user.matches.findIndex(match => match.recieverID.equals(targetUserId));
+        const targetUserMatchIndex = targetUser.matches.findIndex(match => match.recieverID.equals(profileID) );
 
-        const existingMatchForTargetUser = targetUser.matches.find(
-            match => match.recieverID.equals(profileID)
-        );
-
-        if (existingMatchForUser || existingMatchForTargetUser) {
-            // Update existing match status to accepted
-            if (existingMatchForUser) {
-                existingMatchForUser.status = 'accepted';
-                existingMatchForTargetUser.status = 'accepted';
-            }
-            
-            if (existingMatchForTargetUser) {
-                existingMatchForUser.status = 'accepted';
-                existingMatchForTargetUser.status = 'accepted';
-            }
+        if (userMatchIndex !== -1 && targetUserMatchIndex !== -1) {
+            // Update status to 'accepted' in both profiles
+            user.matches[userMatchIndex].status = 'accepted';
+            targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
             user.markModified('matches');
             targetUser.markModified('matches');
@@ -50,29 +129,32 @@ const swipe = async (req, res) => {
             await user.save();
             await targetUser.save();
 
-            return res.json(new ApiResponse(200, null, 'Match accepted'));
+            return res.json(new ApiResponse(200, { message: "matched" }, 'Match accepted'));
         } else {
-            // Create a match request with `pending` status for both profiles
+            // Create a match request with `pending` status for both profiles if not already existing
+            if (userMatchIndex === -1) {
+                user.matches.push({
+                    senderID: profileID,
+                    recieverID: targetUserId,
+                    status: 'pending',
+                });
+            }
+
+            if (targetUserMatchIndex === -1) {
+                targetUser.matches.push({
+                    senderID: targetUserId,
+                    recieverID: profileID,
+                    status: 'pending',
+                });
+            }
+
+            user.markModified('matches');
+            targetUser.markModified('matches');
+
+            await user.save();
+            await targetUser.save();
 
             // Record the action (like or dislike) for the swipe in the initiating user's profile
-            user.matches.push({
-                senderID: profileID,
-                recieverID: targetUserId,
-                status: 'pending',
-            });
-
-            targetUser.matches.push({
-                senderID: profileID,
-                recieverID: targetUserId,
-                status: 'pending',
-            });
-
-            user.markModified('matches');
-            targetUser.markModified('matches');
-
-            await user.save();
-            await targetUser.save();
-
             if (action === 'like' && !user.likes.includes(targetUserId)) {
                 user.likes.push(targetUserId);
             } else if (action === 'dislike' && !user.dislikes.includes(targetUserId)) {
@@ -90,6 +172,7 @@ const swipe = async (req, res) => {
         return res.json(new ApiResponse(500, error.message || error, 'Server error'));
     }
 };
+
 
 const getMatchesByStatus = async (req, res) => {
     const { profileId, status } = req.body;
