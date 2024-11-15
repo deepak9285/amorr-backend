@@ -200,6 +200,7 @@ const register = async (req, res) => {
       userID: newUser._id,
       profileHash: profileHash,
       amorrID: amorrID,
+      userName: username,
       profilePic: "",
       bio: "",
       gender: null,
@@ -313,7 +314,7 @@ const getUserById = async (req, res) => {
       return res.json(new ApiResponse(400, null, 'UserID not provided.'));
     }
 
-    const user = await User.findById({userId});
+    const user = await User.findById({_id: userId});
 
     if (!user) {
       return res.json(new ApiResponse(404, null, 'User not found.'));
