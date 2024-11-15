@@ -12,6 +12,7 @@ import { Match } from "../models/Match.model.js";
 const updateProfile = async (req, res) => {
   try {
     const {
+      username,
       userID,
       profilePic,
       bio,
@@ -24,9 +25,11 @@ const updateProfile = async (req, res) => {
       userPhotos,
     } = req.body;
     const profile = await User.findById(new mongoose.Types.ObjectId(userID));
+    console.log("sdfsdf");
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
     const updatedProfile = await Profile.findOneAndUpdate({ userID }, {
       $set: {
+        username:username||profile.name,
         profilePic: profilePic || profile.profilePic,
         bio: bio || profile.bio,
         gender: gender || profile.gender,
