@@ -1,23 +1,25 @@
 import { Server } from "socket.io";
 import { User } from "../models/user.model.js";
 import { Chat } from "../models/chat.model.js";
+import { GameSession } from "../models/game.model.js";
 import { ChatMessage } from "../models/message.model.js";
 import { ChatEventEnum } from "./chatEvents.js";
+import { v4 as uuidv4 } from "uuid";
+const userSocketMap = new Map();
 
 const setupSocketIO = (httpServer) => {
     const io = new Server(httpServer, {
         pingTimeout: 60000,
         cors: {
-            origin: ["http://localhost:3000"],
+            origin: ["http://192.168.1.41:5500"],
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
             credentials: true,
         },
     });
 
     io.on("connection", async (socket) => {
-
         try {
-            
+
             socket.on("joinChat", ({ chatId }) => {
                 socket.join(chatId);
             });
@@ -209,6 +211,126 @@ const setupSocketIO = (httpServer) => {
                     }
                 } catch (error) {
                     console.error(error);
+                }
+            });
+
+            //Game Requests
+            socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
+                userSocketMap.set(userId, socket.id);
+                const receiverSocketId = userSocketMap.get(receiverId);
+
+                const session = new GameSession({
+                    sessionId: uuidv4(),
+                    sender: senderId,
+                    receiver: receiverId,
+                    requestTime: new Date(),
+                    status: "requested",
+                });
+                await session.save();
+
+                // Notify the receiver about the game challenge
+                io.to(receiverSocketId).emit("receiveGameChallenge", {
+                    sessionId: session.sessionId,
+                    senderId: session.sender,
+                    requestTime: new Date(),
+                });
+                
+            });
+
+            if (userId) {
+                userSocketMap.set(userId, socket.id); // Map User ID to Socket ID
+
+                // Handle disconnection and clean up mapping
+                socket.on("disconnect", () => {
+                    userSocketMap.delete(userId);
+                    console.log(`User ${userId} disconnected`);
+                });
+
+                socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
+                    const receiverSocketId = userSocketMap.get(receiverId); // Get receiver's Socket ID
+
+                    if (receiverSocketId) {
+                        // Notify receiver about the game challenge
+                        io.to(receiverSocketId).emit("receiveGameChallenge", {
+                            sessionId: uuidv4(),
+                            senderId,
+                            requestTime: new Date(),
+                        });
+                    } else {
+                        console.log("Receiver is not online");
+                    }
+                });
+            }
+
+            socket.on("gameChallengeAccept", async ({ sessionId, receiverId }) => {
+                const session = await GameSession.findOne({ sessionId, receiver: receiverId });
+
+                if (session && session.status === "requested") {
+                    session.acceptanceTime = new Date();
+                    session.status = "accepted";
+                    await session.save();
+
+                    // Notify the sender that the challenge was accepted
+                    io.to(session.sender).emit("challengeAccepted", {
+                        sessionId: session.sessionId,
+                        receiverId: session.receiver,
+                        acceptanceTime: session.acceptanceTime,
+                    });
+
+                    // Also notify the receiver to start the game
+                    io.to(session.receiver).emit("challengeAccepted", {
+                        sessionId: session.sessionId,
+                        senderId: session.sender,
+                        acceptanceTime: session.acceptanceTime,
+                    });
+                }
+            });
+
+            socket.on("gameScoreUpdate", async ({ sessionId, senderId, senderScore, receiverScore }) => {
+                const session = await GameSession.findOne({ sessionId });
+
+                if (session && session.status === "accepted") {
+                    session.senderScore = senderScore;
+                    session.receiverScore = receiverScore;
+                    await session.save();
+
+                    // Emit updated scores to both players
+                    io.to(session.sender).emit("scoreUpdated", {
+                        sessionId: session.sessionId,
+                        senderScore: session.senderScore,
+                        receiverScore: session.receiverScore,
+                    });
+                    io.to(session.receiver).emit("scoreUpdated", {
+                        sessionId: session.sessionId,
+                        senderScore: session.senderScore,
+                        receiverScore: session.receiverScore,
+                    });
+                }
+            });
+
+            socket.on("endGame", async ({ sessionId, senderScore, receiverScore }) => {
+                const session = await GameSession.findOne({ sessionId });
+
+                if (session && session.status === "accepted") {
+                    session.endTime = new Date();
+                    session.senderScore = senderScore;
+                    session.receiverScore = receiverScore;
+                    session.status = "completed";
+                    await session.save();
+
+                    // Notify both players that the game has ended
+                    io.to(session.sender).emit("gameEnded", {
+                        sessionId: session.sessionId,
+                        senderScore: session.senderScore,
+                        receiverScore: session.receiverScore,
+                        endTime: session.endTime,
+                    });
+                    io.to(session.receiver).emit("gameEnded", {
+                        sessionId: session.sessionId,
+                        senderScore: session.senderScore,
+                        receiverScore: session.receiverScore,
+                        endTime: session.endTime,
+                    });
                 }
             });
 
