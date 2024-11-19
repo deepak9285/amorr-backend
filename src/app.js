@@ -19,7 +19,7 @@ const app = express();
 dotenv.config();
 const httpServer = createServer(app);
 const io = setupSocketIO(httpServer);
-app.set("io", io);
+app.set("io", io); 
 
 app.get("/health", (req, res) => {
     res.send("Health OK");
@@ -67,5 +67,4 @@ app.use("/api/preference", userPreferenceRouter);
 app.use("/api/game", gameRouter);
 app.use("/api/points", pointsRouter);
 app.use("/api/swipe", swipeRouter);
-
 export { httpServer };

@@ -12,6 +12,7 @@ import { Match } from "../models/Match.model.js";
 const updateProfile = async (req, res) => {
   try {
     const {
+      username,
       userID,
       profilePic,
       bio,
@@ -21,15 +22,14 @@ const updateProfile = async (req, res) => {
       height,
       location,
       relationshipPreference,
-      userPhotos
+      userPhotos,
     } = req.body;
-
     const profile = await User.findById(new mongoose.Types.ObjectId(userID));
-
+    console.log("sdfsdf");
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
-
     const updatedProfile = await Profile.findOneAndUpdate({ userID }, {
       $set: {
+        username:username||profile.name,
         profilePic: profilePic || profile.profilePic,
         bio: bio || profile.bio,
         gender: gender || profile.gender,
@@ -41,11 +41,8 @@ const updateProfile = async (req, res) => {
         userPhotos: userPhotos || profile.userPhotos,
       }
     });
-
     if (!updatedProfile) return res.json(new ApiResponse(500, null, "Unable to update profile , due to unexpected error."));
-
     return res.json(new ApiResponse(200, updatedProfile, 'Profile updated'));
-
   }
   catch (err) {
     return handleErr(res, err);
@@ -137,24 +134,29 @@ const fetch_by_preferences = async (req, res) => {
     const { userID } = req.body;
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
-    const user = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
-    if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
+    const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+    if (!userPreferences) return res.json(new ApiResponse(404, null, 'User not found.'));
 
-    console.log('User found:', user);
+    console.log('User found:', userPreferences);
 
-    const result = await UserPreferences.find({
+    // Calculate date range based on preferred age range
+    const today = new Date();
+    const minAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.max));
+    const maxAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.min));
+
+    const result = await Profile.find({
       "$or": [
-        { preferredGender: { $regex: user.preferredGender, $options: 'i' } },
-        { location: { $regex: user.location, $options: 'i' } },
+        { gender: { $regex: userPreferences.preferredGender, $options: 'i' } },
+        { location: { $regex: userPreferences.location, $options: 'i' } },
         {
-          ageRange: {
-            $gte: user.ageRange.min,
-            $lte: user.ageRange.max
+          dob: {
+            $gte: minAgeDate,
+            $lte: maxAgeDate
           }
         },
-        { relationshipPreference: { $regex: user.relationshipPreference, $options: 'i' } }
+        { relationshipPreference: { $regex: userPreferences.relationshipPreference, $options: 'i' } }
       ]
-    }).populate('user');
+    }).populate('userID');
 
     console.log('Matching users found:', result);
 
@@ -163,8 +165,8 @@ const fetch_by_preferences = async (req, res) => {
     const scoredMatches = await Promise.all(
       result.map(async match => {
         try {
-          const score = await calculateProfileSimilarity(user, match);
-          return { match, score };
+          const score = await calculateProfileSimilarity(userPreferences, match);
+          return { match: match, score };
         } catch (error) {
           console.error('Error calculating similarity:', error);
           return null; // Skip this match if there's an error
@@ -178,22 +180,26 @@ const fetch_by_preferences = async (req, res) => {
     // Sort by score in descending order
     validMatches.sort((a, b) => b.score - a.score);
 
-    //saving scores in db 
-    user.preferredProfiles = validMatches;
-    await user.save();
+    // Save scores in the user's profile
+    const userProfile = await Profile.findOne({ userID: userID });
+    if (!userProfile) {
+      return res.json(new ApiResponse(404, null, 'User profile not found.'));
+    }
+
+    userProfile.preferredProfiles = validMatches;
+    await userProfile.save();
 
     // Return both match and score in the response
-    if (!validMatches || validMatches.length === 0)
-      return res.json(new ApiResponse(404, null, 'No user found'));
+    if (!validMatches || validMatches.length === 0) {
+      return res.json(new ApiResponse(404, null, 'No user found.'));
+    }
 
-    return res.json(new ApiResponse(200, user.preferredProfiles, 'Preference match users fetched successfully'));
-  }
-  catch (err) {
+    return res.json(new ApiResponse(200, userProfile.preferredProfiles, 'Preference match users fetched successfully'));
+  } catch (err) {
     console.error('Error in fetch_by_preferences:', err);
     return handleErr(res, err);
   }
 };
-
 
 
 const fetch_by_id = async (req, res) => {
