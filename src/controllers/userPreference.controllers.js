@@ -23,7 +23,7 @@ const getUserPreference = asyncHandler(async (req, res) => {
             path: 'userID',
             select: 'username email',
         })
-        .select('preferredGender ageRange relationshipPreference location');;
+        .select('preferredGender ageRange relationshipPreference location');
 
     if (!userPreference) {
         return res.status(404).json({ error: 'User preference not found' });
