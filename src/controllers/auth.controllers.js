@@ -195,8 +195,7 @@ const register = async (req, res) => {
       amorrID,
       userHash
     });
-
-    // user profile
+    console.log(newUser);
     const newProfile = await Profile.create({
       userID: newUser._id,
       profileHash: profileHash,
@@ -206,7 +205,10 @@ const register = async (req, res) => {
       bio: "",
       gender: null,
       lookingFor: null,
-      location: "",
+      location: {
+        latitude:null,
+        longitude:null,
+      },
       dob: null,
       height: "",
       relationshipPreference: null,
