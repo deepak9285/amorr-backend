@@ -205,7 +205,10 @@ const register = async (req, res) => {
       bio: "",
       gender: null,
       lookingFor: null,
-      location: "",
+      location: {
+        latitude: "",
+        longitude: ""
+      },
       dob: null,
       height: "",
       relationshipPreference: null,
