@@ -9,7 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 
 const Bucket = process.env.AWS_BUCKET_NAME;
-
+    
 const s3Client = new S3Client({
     region: "eu-north-1",
     credentials: {
