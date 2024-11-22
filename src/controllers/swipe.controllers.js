@@ -1,6 +1,12 @@
 import mongoose from "mongoose";
+import generateHash from "../utils/generateHash.js";
+import { User } from "../models/user.model.js";
+import { Chat } from "../models/chat.model.js";
+import { ApiError } from "../utils/apiError.js";
 import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { emitSocketEvent } from "../socket/socket.js";
+import { ChatEventEnum } from "../socket/chatEvents.js";
 
 // const swipe = async (req, res) => {
 //     const { profileID, targetUserId, action } = req.body;
@@ -92,6 +98,71 @@ import { ApiResponse } from "../utils/apiResponse.js";
 //     }
 // };
 
+const createOrGetAOneOnOneChat = asyncHandler(async (userId, receiverId) => {
+    if (!userId) {
+        return new ApiError(401, "User ID is required");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return new ApiError(404, "User not found");
+    }
+
+    const receiver = await User.findById(receiverId);
+    if (!receiver) {
+        return new ApiError(404, "Receiver does not exist");
+    }
+
+    if (receiver._id.toString() === user._id.toString()) {
+        return new ApiError(400, "You cannot chat with yourself");
+    }
+
+    const existingChat = await Chat.findOne({
+        isGroup: false,
+        participants: { $all: [user._id, receiver._id] },
+    })
+        .populate("participants", "username profileID email")
+        .populate("lastMessage")
+        .populate("firstMessage");
+
+    if (existingChat) {
+        return existingChat;
+    }
+
+    const chatId = await generateHash(user._id.toString() + receiver._id.toString());
+
+    const newChatInstance = new Chat({
+        chatId: chatId,
+        name: "One-on-One Chat",
+        participants: [user._id, receiver._id],
+        admin: user._id,
+    });
+
+    await newChatInstance.save();
+
+    const createdChat = await Chat.findById(newChatInstance._id)
+        .populate("participants", "username profileID email")
+        .populate("lastMessage")
+        .populate("firstMessage");
+
+    if (!createdChat) {
+        return new ApiError(500, "Internal server error");
+    }
+
+    createdChat.participants.forEach((participant) => {
+        if (participant._id.toString() !== user._id.toString()) {
+            emitSocketEvent(
+                null, 
+                participant._id.toString(),
+                ChatEventEnum.NEW_CHAT_EVENT,
+                createdChat
+            );
+        }
+    });
+
+    return createdChat;
+});
+
 
 const swipe = async (req, res) => {
     const { profileID, targetUserId, action } = req.body;
@@ -123,13 +194,15 @@ const swipe = async (req, res) => {
             user.matches[userMatchIndex].status = 'accepted';
             targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
+            const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
+
             user.markModified('matches');
             targetUser.markModified('matches');
 
             await user.save();
             await targetUser.save();
 
-            return res.json(new ApiResponse(200, { message: "matched" }, 'Match accepted'));
+            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted'));
         } else {
             // Create a match request with `pending` status for both profiles if not already existing
             if (userMatchIndex === -1) {
