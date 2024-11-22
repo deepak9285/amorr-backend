@@ -9,14 +9,22 @@ const UserPreferencesSchema = new mongoose.Schema({
     min: { type: Number },
     max: { type: Number }
   },
-  relationshipPreference:{
-    type:String,
-    enum:['Life Long partner', 'Long Term Relationship', 'Short Term Relationship', 'Friship & Connection', 'Situationship', 'Something casual'],
-    required:true
+  relationshipPreference: {
+    type: String,
+    enum: [
+      "Life Long partner",
+      "Long Term Relationship",
+      "Short Term Relationship",
+      "Friendship & Connection",
+      "Situationship",
+      "Something casual",
+    ],
+    required: true
   },
   location: {
-    type: String
-  }
+    latitude: { type: Number, required: false, min: -90, max: 90 },
+    longitude: { type: Number, required: false, min: -180, max: 180 },
+  },
 });
 
 const UserPreferences = mongoose.model('UserPreferences', UserPreferencesSchema);
