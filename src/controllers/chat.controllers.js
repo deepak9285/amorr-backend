@@ -10,7 +10,7 @@ import generateHash from "../utils/generateHash.js";
 
 const getAllChats = asyncHandler(async (req, res) => {
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     if (!userId) {
         return new ApiError(401, "User ID is required");
     }
@@ -55,7 +55,8 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
 
     const { receiverId } = req.params;
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
+
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
     }
@@ -92,6 +93,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
         chatId: chatId,
         isGroup: false,
         participants: { $all: [req.user._id, receiverId] },
+        firstMessage: "6728f387bea894365495266b" //new msg for new connection as default
     }).populate("participants", "username profileID email")
         .populate("lastMessage")
         .populate("firstMessage");
@@ -135,7 +137,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
 
 const createAGroupChat = asyncHandler(async (req, res) => {
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     if (!userId) {
         return new ApiError(401, "User ID is required");
     }
@@ -208,7 +210,7 @@ const createAGroupChat = asyncHandler(async (req, res) => {
 const addUserToGroup = asyncHandler(async (req, res) => {
 
     const { groupId, newUserId } = req.params;
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
@@ -306,7 +308,7 @@ const editGroupDetails = asyncHandler(async (req, res) => {
 const removeUserFromGroup = asyncHandler(async (req, res) => {
 
     const { groupId, userIdToRemove } = req.params;
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
@@ -360,7 +362,7 @@ const deleteGroup = asyncHandler(async (req, res) => {
 
 const blockUser = asyncHandler(async (req, res) => {
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     const { userToBlockId } = req.params;
 
     if (!userId) {
@@ -396,7 +398,7 @@ const blockUser = asyncHandler(async (req, res) => {
 
 const unblockUser = asyncHandler(async (req, res) => {
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     const { userToUnblockId } = req.params;
 
     if (!userId) {
@@ -425,7 +427,7 @@ const unblockUser = asyncHandler(async (req, res) => {
 const checkBlockStatus = asyncHandler(async (req, res) => {
 
     const { userToCheckId } = req.params;
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));

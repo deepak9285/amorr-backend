@@ -19,16 +19,7 @@ const getLocalPath = (fileName) => {
     return `public/images/${fileName}`;
 };
 
-const removeLocalFile = (localPath) => {
-    fs.unlink(localPath, (err) => {
-        if (err) console.error("Error while removing local files: ", err);
-        else {
-            console.info("Removed local: ", localPath);
-        }
-    });
-};
-
-const getAllMessagesofChat =asyncHandler (async (req, res) => {
+const getAllMessagesofChat = asyncHandler(async (req, res) => {
     const { chatId } = req.params;
 
     const selectedChat = await Chat.findById(chatId);
@@ -36,7 +27,7 @@ const getAllMessagesofChat =asyncHandler (async (req, res) => {
         return res.status(404).json(new ApiError(404, "Chat does not exist"));
     }
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
     }
@@ -76,7 +67,7 @@ const getUserConvfromGroup = asyncHandler(async (req, res) => {
         return res.status(404).json(new ApiError(404, "Chat does not exist"));
     }
 
-    const userId = req.headers['user-id'];
+    const { userId } = req.body;
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
     }
@@ -98,103 +89,101 @@ const getUserConvfromGroup = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, messages || [], "Messages fetched successfully"));
 });
 
-const sendMessage = asyncHandler(async(req, res) => {
-        const { chatId } = req.params;
-        const { content } = req.body;
-        const userId = req.headers['user-id'];
+const sendMessage = asyncHandler(async (req, res) => {
+    const { chatId } = req.params;
+    const { content, userId } = req.body;
 
-        if (!userId) {
-            return res.status(401).json(new ApiError(401, "User ID is required"));
-        }
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User ID is required"));
+    }
 
-        if (!mongoose.isValidObjectId(userId)) {
-            return res.status(400).json(new ApiError(400, "Invalid User ID format"));
-        }
+    if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json(new ApiError(400, "Invalid User ID format"));
+    }
 
 
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found"));
-        }
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
 
-        if (!content && !(req.files?.attachments?.length > 0)) {
-            return res.status(400).json(new ApiError(400, "Message content or attachment is required"));
-        }
+    if (!content && !(req.files?.attachments?.length > 0)) {
+        return res.status(400).json(new ApiError(400, "Message content or attachment is required"));
+    }
 
-        const selectedChat = await Chat.findById(chatId);
+    const selectedChat = await Chat.findById(chatId);
 
-        if (!selectedChat) {
-            return res.status(404).json(new ApiError(404, "Chat does not exist"));
-        }
+    if (!selectedChat) {
+        return res.status(404).json(new ApiError(404, "Chat does not exist"));
+    }
 
-        const messageFiles = [];
-        if (req.files && req.files.attachments?.length > 0) {
-            req.files.attachments.map((attachment) => {
-                messageFiles.push({
-                    url: getStaticFilePath(req, attachment.filename),
-                    localPath: getLocalPath(attachment.filename),
-                });
+    const messageFiles = [];
+    if (req.files && req.files.attachments?.length > 0) {
+        req.files.attachments.map((attachment) => {
+            messageFiles.push({
+                url: getStaticFilePath(req, attachment.filename),
+                localPath: getLocalPath(attachment.filename),
             });
-        }
-
-        // Generate a unique message hash ID
-        const msgId = await generateHash(`${chatId}-${userId}-${Date.now()}`) || new mongoose.Types.ObjectId().toString();
-
-        const message = await ChatMessage.create({
-            msg_hash: msgId,
-            msg_conversation_hash: chatId,
-            msg_sender_amorr_id: userId,
-            msg_timestamp: Date.now(),
-            msg_added_time: Date.now(),
-            msg_updated_time: Date.now(),
-            msg_sent_status: true,
-            msg_deleted_status: false,
-            msg_text: content || "",
-            msg_mediaUrl: messageFiles,
         });
+    }
 
-        const chat = await Chat.findByIdAndUpdate(
-            chatId,
-            {
-                $set: {
-                    lastMessage: message._id,
-                },
+    // Generate a unique message hash ID
+    const msgId = await generateHash(`${chatId}-${userId}-${Date.now()}`) || new mongoose.Types.ObjectId().toString();
+
+    const message = await ChatMessage.create({
+        msg_hash: msgId,
+        msg_conversation_hash: chatId,
+        msg_sender_amorr_id: userId,
+        msg_timestamp: Date.now(),
+        msg_added_time: Date.now(),
+        msg_updated_time: Date.now(),
+        msg_sent_status: true,
+        msg_deleted_status: false,
+        msg_text: content || "",
+        msg_mediaUrl: messageFiles,
+    });
+
+    const chat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set: {
+                lastMessage: message._id,
             },
-            { new: true }
+        },
+        { new: true }
+    );
+
+    const receivedMessage = await ChatMessage.findById(message._id)
+        .populate("msg_sender_amorr_id", "isOnline username")
+        .populate("msg_conversation_hash", "name isGroup userBlocked lastMessage");
+
+    if (!receivedMessage) {
+        return res.status(500).json(new ApiError(500, "Internal server error"));
+    }
+
+    chat.participants.forEach(async (participantObjectId) => {
+        if (participantObjectId.toString() === userId.toString()) return;
+
+        emitSocketEvent(
+            req,
+            participantObjectId.toString(),
+            ChatEventEnum.MESSAGE_RECEIVED_EVENT,
+            receivedMessage
         );
+        await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_SENT, receivedMessage);
+    });
+    console.log("done emit");
 
-        const receivedMessage = await ChatMessage.findById(message._id)
-            .populate("msg_sender_amorr_id", "isOnline username")
-            .populate("msg_conversation_hash", "name isGroup userBlocked lastMessage");
+    return res
+        .status(201)
+        .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
 
-        if (!receivedMessage) {
-            return res.status(500).json(new ApiError(500, "Internal server error"));
-        }
 
-        chat.participants.forEach(async(participantObjectId) => {
-            if (participantObjectId.toString() === userId.toString()) return;
-
-            emitSocketEvent(
-                req,
-                participantObjectId.toString(),
-                ChatEventEnum.MESSAGE_RECEIVED_EVENT,
-                receivedMessage
-            );
-            await sendNotification(req, participantObjectId.toString(), MessageEventTypes.MESSAGE_SENT, receivedMessage);
-        });
-        console.log("done emit");
-
-        return res
-            .status(201)
-            .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
-
-    
 });
 
 const sendMessagetoReply = asyncHandler(async (req, res) => {
     const { chatId, replyTo } = req.params;
-    const { content } = req.body;
-    const userId = req.headers['user-id'];
+    const { content, userId } = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
@@ -278,7 +267,7 @@ const sendMessagetoReply = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiError(500, "Internal server error"));
     }
 
-    chat.participants.forEach(async(participantObjectId) => {
+    chat.participants.forEach(async (participantObjectId) => {
         if (participantObjectId.toString() === userId.toString()) return;
 
         emitSocketEvent(
@@ -298,71 +287,71 @@ const sendMessagetoReply = asyncHandler(async (req, res) => {
 });
 
 const deleteMessage = asyncHandler(async (req, res) => {
-        const { chatId, messageId } = req.params;
+    const { chatId, messageId } = req.params;
 
-        const userId = req.headers['user-id'];
-        if (!userId) {
-            return res.status(401).json(new ApiError(401, "User ID is required"));
-        }
+    const { userId } = req.body;
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User ID is required"));
+    }
 
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found"));
-        }
-        req.user = user;
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json(new ApiError(404, "User not found"));
+    }
+    req.user = user;
 
-        const chat = await Chat.findOne({
-            _id: chatId,
-            participants: req.user._id,
-        });
+    const chat = await Chat.findOne({
+        _id: chatId,
+        participants: req.user._id,
+    });
 
-        if (!chat) {
-            return res.status(404).json(new ApiError(404, "Chat does not exist"));
-        }
+    if (!chat) {
+        return res.status(404).json(new ApiError(404, "Chat does not exist"));
+    }
 
-        const message = await ChatMessage.findById(messageId);
+    const message = await ChatMessage.findById(messageId);
 
-        if (!message) {
-            return res.status(404).json(new ApiError(404, "Message does not exist"));
-        }
+    if (!message) {
+        return res.status(404).json(new ApiError(404, "Message does not exist"));
+    }
 
-        if (message.msg_sender_amorr_id.toString() !== req.user._id.toString()) {
-            return res.status(403).json(
-                new ApiError(403, "You are not authorized to delete the message; you are not the sender")
-            );
-        }
+    if (message.msg_sender_amorr_id.toString() !== req.user._id.toString()) {
+        return res.status(403).json(
+            new ApiError(403, "You are not authorized to delete the message; you are not the sender")
+        );
+    }
 
-        await ChatMessage.updateOne(
-            { _id: messageId },
-            { $set: { msg_deleted_status: true } }
+    await ChatMessage.updateOne(
+        { _id: messageId },
+        { $set: { msg_deleted_status: true } }
+    );
+
+
+    if (chat.lastMessage.toString() === message._id.toString()) {
+        const lastMessage = await ChatMessage.findOne(
+            { msg_conversation_hash: chatId, msg_deleted_status: true },
+            {},
+            { sort: { msg_timestamp: -1 } }
         );
 
-
-        if (chat.lastMessage.toString() === message._id.toString()) {
-            const lastMessage = await ChatMessage.findOne(
-                { msg_conversation_hash: chatId, msg_deleted_status: true },
-                {},
-                { sort: { msg_timestamp: -1 } }
-            );
-
-            await Chat.findByIdAndUpdate(chatId, {
-                lastMessage: lastMessage ? lastMessage._id : null,
-            });
-        }
-
-        chat.participants.forEach((participantObjectId) => {
-            if (participantObjectId.toString() === req.user._id.toString()) return;
-
-            emitSocketEvent(
-                req,
-                participantObjectId.toString(),
-                ChatEventEnum.MESSAGE_DELETE_EVENT,
-                message
-            );
+        await Chat.findByIdAndUpdate(chatId, {
+            lastMessage: lastMessage ? lastMessage._id : null,
         });
+    }
 
-        return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
-   
+    chat.participants.forEach((participantObjectId) => {
+        if (participantObjectId.toString() === req.user._id.toString()) return;
+
+        emitSocketEvent(
+            req,
+            participantObjectId.toString(),
+            ChatEventEnum.MESSAGE_DELETE_EVENT,
+            message
+        );
+    });
+
+    return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
+
 });
 
 export {
