@@ -26,6 +26,9 @@ const updateProfile = async (req, res) => {
       relationshipPreference,
       userPhotos,
     } = req.body;
+    console.log(req.body);
+    const { latitude, longitude } = location;
+    //console.log(latitude);
     const profile = await User.findById(new mongoose.Types.ObjectId(userID));
     console.log("sdfsdf");
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
@@ -36,7 +39,10 @@ const updateProfile = async (req, res) => {
         bio: bio || profile.bio,
         gender: gender || profile.gender,
         lookingFor: lookingFor || profile.lookingFor,
-        location: location || profile.location,
+        location: {
+          latitude: latitude || profile.location.latitude,
+          longitude: longitude || profile.location.longitude,
+        },
         dob: dob || profile.dob,
         height: height || profile.height,
         relationshipPreference: relationshipPreference || profile.relationshipPreference,

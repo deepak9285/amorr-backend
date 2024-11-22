@@ -206,8 +206,8 @@ const register = async (req, res) => {
       gender: null,
       lookingFor: null,
       location: {
-        latitude:null,
-        longitude:null,
+        latitude: "",
+        longitude: ""
       },
       dob: null,
       height: "",
