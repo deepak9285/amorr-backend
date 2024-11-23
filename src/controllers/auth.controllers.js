@@ -3,7 +3,6 @@ import { User } from "../models/user.model.js";
 import { ApiError, handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from 'crypto';

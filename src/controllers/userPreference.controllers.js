@@ -9,7 +9,7 @@ const createUserPreference = asyncHandler(async (req, res) => {
         preferredGender,
         ageRange,
         relationshipPreference,
-        location
+        location,
     });
 
     const savedPreference = await newPreference.save();
