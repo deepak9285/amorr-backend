@@ -4,12 +4,8 @@ import {
     PutObjectCommand,
     S3Client,
 } from "@aws-sdk/client-s3";
-
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
-
 const Bucket = process.env.AWS_BUCKET_NAME;
-    
 const s3Client = new S3Client({
     region: "eu-north-1",
     credentials: {
@@ -36,8 +32,8 @@ async function uploadObject(
 ) {
     try {
         const filename = `img-${Date.now()}`
-        const key = `uploads/${folder}/${filename}`;
-        const folderNames = ["ProfileImages", "ProductImages", "userDocuments", "test_folder"];
+        const key = `uploads/${folder}/${fileName}`;
+        const folderNames = ["ProfileImages", "ProductImages","CoverImages", "userDocuments", "test_folder"];
         if (!folderNames.includes(folder)) {
             return {
                 error: "invalid folder name",
@@ -88,12 +84,8 @@ async function uploadFile(fileName, folderName, contentType, image) {
         //   })
         // });
 
-        const data = await uploadObject(fileName, folderName, contentType)
-
-        // console.log(data);
-
+        const data = await uploadObject(fileName, folderName, contentType);
         const { url, key } = data;
-
         const upload = await fetch(url ? url : "", {
             method: "PUT",
             headers: {

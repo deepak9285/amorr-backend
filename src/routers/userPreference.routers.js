@@ -6,7 +6,7 @@ import {
     deleteUserPreference
 } from '../controllers/userPreference.controllers.js';
 
-const router = Router();
+const router = Router(); 
 
 router.route('/').post(createUserPreference);
 router.route('/:id').get(getUserPreference);
