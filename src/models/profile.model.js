@@ -72,6 +72,10 @@ const ProfileSchema = new mongoose.Schema(
           enum: ["pending", "accepted", "rejected"],
           default: "pending",
         },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        }
       },
     ],
     preferredProfiles: [

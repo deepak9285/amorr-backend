@@ -187,15 +187,15 @@ const swipe = async (req, res) => {
         }
 
         // Check if a match already exists in both profiles
-        const userMatchIndex = user.matches.findIndex(match => match.recieverID.equals(targetUserId));
-        const targetUserMatchIndex = targetUser.matches.findIndex(match => match.recieverID.equals(profileID) );
+        const userMatchIndex = user.matches.findIndex(match => match.senderID.equals(targetUserId) && match.recieverID.equals(profileID));
+        const targetUserMatchIndex = targetUser.matches.findIndex(match => match.recieverID.equals(profileID) && match.senderID.equals(targetUserId));
 
         if (userMatchIndex !== -1 && targetUserMatchIndex !== -1) {
             // Update status to 'accepted' in both profiles
             user.matches[userMatchIndex].status = 'accepted';
             targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
-            const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
+            const chat = createOrGetAOneOnOneChat(profileID, targetUserId);
 
             user.markModified('matches');
             targetUser.markModified('matches');
@@ -205,19 +205,15 @@ const swipe = async (req, res) => {
 
             return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted'));
         } else {
-            // Create a match request with `pending` status for both profiles if not already existing
-            if (userMatchIndex === -1) {
+            if (userMatchIndex === -1 || targetUserMatchIndex === -1) {
                 user.matches.push({
                     senderID: profileID,
                     recieverID: targetUserId,
                     status: 'pending',
                 });
-            }
-
-            if (targetUserMatchIndex === -1) {
                 targetUser.matches.push({
-                    senderID: targetUserId,
-                    recieverID: profileID,
+                    senderID: profileID,
+                    recieverID: targetUserId,
                     status: 'pending',
                 });
             }

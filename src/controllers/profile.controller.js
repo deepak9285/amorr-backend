@@ -8,6 +8,8 @@ import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
 // const tf = require('@tensorflow/tfjs');
 // const use = require('@tensorflow-models/universal-sentence-encoder');
 import { Match } from "../models/Match.model.js";
+import haversine from 'haversine-distance';
+
 
 const updateProfile = async (req, res) => {
   try {
@@ -138,6 +140,7 @@ const calculateProfileCompleteness = async (req, res) => {
 const fetch_by_preferences = async (req, res) => {
   try {
     const { userID } = req.body;
+    console.log("api", userID)
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
@@ -153,7 +156,7 @@ const fetch_by_preferences = async (req, res) => {
     const result = await Profile.find({
       "$or": [
         { gender: { $regex: userPreferences.preferredGender, $options: 'i' } },
-        { location: { $regex: userPreferences.location, $options: 'i' } },
+        // { location: { $regex: userPreferences.location, $options: 'i' } },
         {
           dob: {
             $gte: minAgeDate,
@@ -206,6 +209,148 @@ const fetch_by_preferences = async (req, res) => {
     return handleErr(res, err);
   }
 };
+
+// const fetch_by_preferences = async (req, res) => {
+//   try {
+//     const { userID } = req.body;
+//     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+
+//     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+//     if (!userPreferences) return res.json(new ApiResponse(404, null, 'User preferences not found.'));
+
+//     const userProfile = await Profile.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+//     if (!userProfile) return res.json(new ApiResponse(404, null, 'User profile not found.'));
+
+//     const userLocation = userPreferences.location;
+
+//     // Calculate age range
+//     const today = new Date();
+//     const minAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.max));
+//     const maxAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.min));
+
+//     const potentialMatches = await Profile.find({
+//       dob: { $gte: minAgeDate, $lte: maxAgeDate },
+//       gender: { $regex: userPreferences.preferredGender, $options: 'i' },
+//       relationshipPreference: { $regex: userPreferences.relationshipPreference, $options: 'i' },
+//     }).populate('userID');
+
+//     // Calculate distances and filter by proximity
+//     const distanceThreshold = 500 * 1000; // Example threshold: 50 km
+//     const matchesWithinRange = potentialMatches.filter((match) => {
+//       if (!match.location || !match.location.latitude || !match.location.longitude) return false;
+
+//       const matchLocation = {
+//         latitude: match.location.latitude,
+//         longitude: match.location.longitude,
+//       };
+//       const distance = haversine(userLocation, matchLocation);
+//       return distance <= distanceThreshold;
+//     });
+
+//     // Score matches
+//     const scoredMatches = await Promise.all(
+//       matchesWithinRange.map(async (match) => {
+//         try {
+//           const score = await calculateProfileSimilarity(userPreferences, match);
+//           return { match: match, score };
+//         } catch (error) {
+//           console.error('Error calculating similarity:', error);
+//           return null; // Skip if there's an error
+//         }
+//       })
+//     );
+
+//     const validMatches = scoredMatches.filter((item) => item !== null);
+
+//     // Sort by score
+//     validMatches.sort((a, b) => b.score - a.score);
+
+//     userProfile.preferredProfiles = validMatches;
+//     await userProfile.save();
+
+//     if (!validMatches || validMatches.length === 0) {
+//       return res.json(new ApiResponse(404, null, 'No matching users found.'));
+//     }
+
+//     return res.json(new ApiResponse(200, userProfile.preferredProfiles, 'Matching users fetched successfully.'));
+//   } catch (err) {
+//     console.error('Error in fetch_by_preferences:', err);
+//     return handleErr(res, err);
+//   }
+// };
+
+// const fetch_by_preferences = async (req, res) => {
+//   try {
+//     const { userID } = req.body;
+//     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+
+//     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+//     if (!userPreferences) return res.json(new ApiResponse(404, null, 'User preferences not found.'));
+
+//     const userProfile = await Profile.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+//     if (!userProfile) return res.json(new ApiResponse(404, null, 'User profile not found.'));
+
+//     // Commented out: Location-based filtering logic
+//     // const userLocation = userPreferences.location;
+
+//     // Calculate age range
+//     const today = new Date();
+//     const minAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.max));
+//     const maxAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.min));
+
+//     const potentialMatches = await Profile.find({
+//       dob: { $gte: minAgeDate, $lte: maxAgeDate },
+//       gender: { $regex: userPreferences.preferredGender, $options: 'i' },
+//       relationshipPreference: { $regex: userPreferences.relationshipPreference, $options: 'i' },
+//     }).populate('userID');
+
+//     // Commented out: Filtering matches by proximity
+//     // const distanceThreshold = 50 * 1000; // Example threshold: 50 km
+//     // const matchesWithinRange = potentialMatches.filter((match) => {
+//     //   if (!match.location || !match.location.latitude || !match.location.longitude) return false;
+
+//     //   const matchLocation = {
+//     //     latitude: match.location.latitude,
+//     //     longitude: match.location.longitude,
+//     //   };
+//     //   const distance = haversine(userLocation, matchLocation);
+//     //   return distance <= distanceThreshold;
+//     // });
+
+//     // For now, use all potential matches
+//     const matchesWithinRange = potentialMatches;
+
+//     // Score matches
+//     const scoredMatches = await Promise.all(
+//       matchesWithinRange.map(async (match) => {
+//         try {
+//           const score = await calculateProfileSimilarity(userPreferences, match);
+//           return { match: match, score };
+//         } catch (error) {
+//           console.error('Error calculating similarity:', error);
+//           return null; // Skip if there's an error
+//         }
+//       })
+//     );
+
+//     const validMatches = scoredMatches.filter((item) => item !== null);
+
+//     // Sort by score
+//     validMatches.sort((a, b) => b.score - a.score);
+
+//     userProfile.preferredProfiles = validMatches;
+//     await userProfile.save();
+
+//     if (!validMatches || validMatches.length === 0) {
+//       return res.json(new ApiResponse(404, null, 'No matching users found.'));
+//     }
+
+//     return res.json(new ApiResponse(200, userProfile.preferredProfiles, 'Matching users fetched successfully.'));
+//   } catch (err) {
+//     console.error('Error in fetch_by_preferences:', err);
+//     return handleErr(res, err);
+//   }
+// };
 
 
 const fetch_by_id = async (req, res) => {
