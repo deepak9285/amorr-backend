@@ -7,6 +7,7 @@ import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { emitSocketEvent } from "../socket/socket.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 // const swipe = async (req, res) => {
 //     const { profileID, targetUserId, action } = req.body;
