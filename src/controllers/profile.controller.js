@@ -146,7 +146,7 @@ const fetch_by_preferences = async (req, res) => {
     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
     if (!userPreferences) return res.json(new ApiResponse(404, null, 'User not found.'));
 
-    console.log('User found:', userPreferences);
+    console.log('User found1:', userPreferences);
 
     // Calculate date range based on preferred age range
     const today = new Date();
