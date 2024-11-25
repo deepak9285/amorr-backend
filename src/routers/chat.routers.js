@@ -17,7 +17,7 @@ import {
 const router = Router();
 
 
-router.route("/oneOnone/:receiverId").post(createOrGetAOneOnOneChat);
+router.route("/oneOnone").post(createOrGetAOneOnOneChat);
 router.route("/group").post(createAGroupChat);
 router.route("/allchats").post(getAllChats);
 router.route("/status/:userId").get(getUserStatus);

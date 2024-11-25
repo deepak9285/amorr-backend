@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { ApiError, handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
 import { transporter } from "../utils/transporter.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from 'crypto';
@@ -29,10 +30,12 @@ const sendEmailOtp = async (req, res) => {
     console.log('send otp api');
 
     const { email } = req.body;
+    console.log(email)
     // Delete all previous otps for the user
     await Otp.deleteMany({ email });
     const user = await User.findOne({ email });
-    if (user.isEmailVerified) {
+    console.log(user);
+    if (user?.isEmailVerified) {
       return res.json(new ApiResponse(409, "Email already verified!"));
     }
     console.log('gen otp')
@@ -72,12 +75,6 @@ const verifyEmailOtp = async (req, res) => {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
 
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      return res.json(new ApiResponse(409, "User already exists!"));
-    }
-
     const hashedOtp = await Otp.findOne({ email });
 
     if (!hashedOtp) {
@@ -87,27 +84,23 @@ const verifyEmailOtp = async (req, res) => {
     const { createdAt } = hashedOtp;
 
     if (createdAt < Date.now() - 600000) {
-      return res.json(
-        new ApiResponse(422, "Otp has expired , please request again")
-      );
+      return res.json(new ApiResponse(422, "Otp has expired, please request again"));
     }
 
     const verify = bcrypt.compareSync(otp, hashedOtp.otp);
 
     if (verify) {
+      await User.updateOne({ email }, { isEmailVerified: true });
       await Otp.deleteOne({ email });
       return res.json(new ApiResponse(200, "Email verified successfully"));
     }
-    else {
-      return res.json(new ApiResponse(400, "Otp entered is wrong"));
-    }
 
-  }
-  catch (err) {
-    // console.log(err);
-    return res.json(new ApiError(400, "verification failed", err.message));
+    return res.json(new ApiResponse(400, "Otp entered is wrong"));
+  } catch (err) {
+    return res.json(new ApiError(400, "Verification failed", err.message));
   }
 };
+
 
 const loginUser = async (req, res) => {
   try {
@@ -140,17 +133,6 @@ const loginUser = async (req, res) => {
     const loggedInUser = await User.findById(user._id).select(
       "-password -refreshToken"
     );
-
-    // const userProfie = await Profile.findOne({ userID: new mongoose.Types.ObjectId(loggedInUser._id) })
-    // console.log(userProfie)
-    // if (!userProfie) {
-    //   const newProfile = new Profile({
-    //     userID: loggedInUser._id,
-    //   });
-    // }
-    // if(userProfie.gender === null || userProfie.lookingFor === null || userProfie.location === '' || userProfie.dob === null || userProfie.relationshipPreference === null || userProfie.bio === '')
-    //   return res.json(new ApiResponse(409, null, 'Complete your profile setup first!'))
-
     return res
       .status(200)
       .cookie("refreshToken", refreshToken, options)
@@ -162,7 +144,6 @@ const loginUser = async (req, res) => {
 };
 
 const register = async (req, res) => {
-
   try {
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
@@ -205,8 +186,8 @@ const register = async (req, res) => {
       gender: null,
       lookingFor: null,
       location: {
-        latitude: "",
-        longitude: ""
+        latitude: null,
+        longitude: null,
       },
       dob: null,
       height: "",
@@ -217,7 +198,6 @@ const register = async (req, res) => {
     newUser.profileID = newProfile._id;
     await newUser.save();
 
-    console.log("New User and Profile Created:", newUser, newProfile);
     return res.json(
       new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")
     );
@@ -313,7 +293,7 @@ const getUserById = async (req, res) => {
       return res.json(new ApiResponse(400, null, 'UserID not provided.'));
     }
 
-    const user = await User.findById({_id: userId});
+    const user = await User.findById({ _id: userId });
 
     if (!user) {
       return res.json(new ApiResponse(404, null, 'User not found.'));
