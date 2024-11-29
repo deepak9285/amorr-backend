@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 import generateHash from "../utils/generateHash.js";
 import { User } from "../models/user.model.js";
 import { Chat } from "../models/chat.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { emitSocketEvent } from "../socket/socket.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 
 // const swipe = async (req, res) => {
 //     const { profileID, targetUserId, action } = req.body;
@@ -195,7 +195,7 @@ const swipe = async (req, res) => {
             user.matches[userMatchIndex].status = 'accepted';
             targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
-            const chat = createOrGetAOneOnOneChat(profileID, targetUserId);
+            const chat = await createOrGetAOneOnOneChat(profileID.userId, targetUserId.userId);
 
             user.markModified('matches');
             targetUser.markModified('matches');
@@ -235,7 +235,9 @@ const swipe = async (req, res) => {
             user.markModified('dislikes');
             await user.save();
 
-            return res.json(new ApiResponse(200, user, 'Swipe recorded, match requests created with pending status.'));
+            const chat = await createOrGetAOneOnOneChat(user.userID, targetUser.userID);
+
+            return res.json(new ApiResponse(200, user, "Chats",chat,'Swipe recorded, match requests created with pending status.'));
         }
     } catch (error) {
         console.error("Error in swipe API:", error);

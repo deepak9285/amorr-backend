@@ -8,7 +8,7 @@ import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
 // const tf = require('@tensorflow/tfjs');
 // const use = require('@tensorflow-models/universal-sentence-encoder');
 import { Match } from "../models/Match.model.js";
-import haversine from 'haversine-distance';
+// import haversine from 'haversine-distance';
 
 
 const updateProfile = async (req, res) => {
@@ -26,6 +26,7 @@ const updateProfile = async (req, res) => {
       relationshipPreference,
       userPhotos,
     } = req.body;
+    
     console.log(req.body);
     const { latitude, longitude } = location;
     //console.log(latitude);
@@ -34,7 +35,7 @@ const updateProfile = async (req, res) => {
     if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
     const updatedProfile = await Profile.findOneAndUpdate({ userID }, {
       $set: {
-        username:username||profile.name,
+        username: username || profile.name,
         profilePic: profilePic || profile.profilePic,
         bio: bio || profile.bio,
         gender: gender || profile.gender,
