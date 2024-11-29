@@ -358,7 +358,7 @@ const fetch_by_id = async (req, res) => {
     const { profileID } = req.body;
     if (!profileID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
-    const profile = await Profile.findById({ _id: new mongoose.Types.ObjectId(profileID) });
+    const profile = await Profile.findById({ _id : new mongoose.Types.ObjectId(profileID) });
     if (!profile) return res.json(new ApiResponse(404, null, 'profile not found.'));
 
     return res.json(new ApiResponse(200, profile, 'profile fetched successfully.'));

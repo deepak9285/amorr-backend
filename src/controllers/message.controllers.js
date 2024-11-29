@@ -61,7 +61,7 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
 
 const getUserConvfromGroup = asyncHandler(async (req, res) => {
     const { chatId } = req.params;
-
+    
     const selectedChat = await Chat.findById(chatId);
     if (!selectedChat) {
         return res.status(404).json(new ApiError(404, "Chat does not exist"));
@@ -90,8 +90,8 @@ const getUserConvfromGroup = asyncHandler(async (req, res) => {
 });
 
 const sendMessage = asyncHandler(async (req, res) => {
-    const { chatId } = req.params;
-    const { content, userId } = req.body;
+     const { chatId } = req.params;
+    const { content, userId} = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
@@ -177,8 +177,6 @@ const sendMessage = asyncHandler(async (req, res) => {
     return res
         .status(201)
         .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
-
-
 });
 
 const sendMessagetoReply = asyncHandler(async (req, res) => {

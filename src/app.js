@@ -11,6 +11,7 @@ import userPreferenceRouter from "./routers/userPreference.routers.js";
 import gameRouter from "./routers/game.routers.js";
 import pointsRouter from "./routers/points.routers.js";
 import swipeRouter from './routers/swipe.routers.js'
+import S3BucketRouter from './routers/S3Bucket.routers.js';
 import { createServer } from "http";
 import {setupSocketIO} from "./socket/socket.js";
 
@@ -24,6 +25,9 @@ app.set("io", io);
 app.get("/health", (req, res) => {
     res.send("Health OK");
 });
+app.get('/api/chat/oneOnone', (req, res) => {
+    res.json({ message: "API is working" });
+  });
 
 // middlewares
 app.use(
@@ -60,6 +64,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/S3Bucket",S3BucketRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/message", messRouter);
 app.use("/api/notification", notiRouter);

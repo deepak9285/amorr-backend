@@ -5,7 +5,7 @@ import {
   deleteObject,
   uploadFile,
   getObjectUrl,
-} from "../utils/aws";
+} from "../utils/aws.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { Profile } from "../models/profile.model.js";
 const UploadObject = async (req, res) => {
