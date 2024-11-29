@@ -195,7 +195,7 @@ const swipe = async (req, res) => {
             user.matches[userMatchIndex].status = 'accepted';
             targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
-            const chat = await createOrGetAOneOnOneChat(profileID.userId, targetUserId.userId);
+            const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
 
             user.markModified('matches');
             targetUser.markModified('matches');
@@ -203,7 +203,7 @@ const swipe = async (req, res) => {
             await user.save();
             await targetUser.save();
 
-            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted'));
+            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted, chat created'));
         } else {
             if (userMatchIndex === -1 || targetUserMatchIndex === -1) {
                 user.matches.push({
@@ -259,12 +259,21 @@ const getMatchesByStatus = async (req, res) => {
         if (!user) {
             return res.status(404).json(new ApiResponse(404, null, 'User not found'));
         }
-        const matches = user.matches.filter(match => match.status === status);
+
+        let matches = user.matches.filter(match => match.status === status);
+
+        // Filter pending matches where the user is the receiver
+        if (status === 'pending') {
+            matches = matches.filter(match => match.recieverID.toString() === profileId);
+        }
+
         return res.status(200).json(new ApiResponse(200, matches, 'Matches fetched successfully'));
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, error, 'Server error'));
+        console.error("Error in getMatchesByStatus:", error);
+        return res.status(500).json(new ApiResponse(500, error.message || error, 'Server error'));
     }
 };
+
 
 
 const updateMatchStatus = async (req, res) => {

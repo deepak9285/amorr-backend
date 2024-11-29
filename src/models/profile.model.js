@@ -30,7 +30,9 @@ const ProfileSchema = new mongoose.Schema(
       latitude: { type: String, required: false, min: -90, max: 90 },
       longitude: { type: String, required: false, min: -180, max: 180 },
     },
+    nativePlace: { type: String },
     dob: { type: Date },
+    edu: { type: String },
     height: {
       type: String,
     },
@@ -69,7 +71,7 @@ const ProfileSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          enum: ["pending", "accepted", "rejected"],
+          enum: ["pending", "accepted", "rejected", "chat"],
           default: "pending",
         },
         createdAt: {

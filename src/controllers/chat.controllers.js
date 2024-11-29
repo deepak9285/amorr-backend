@@ -53,7 +53,7 @@ const getUserStatus = asyncHandler(async (req, res) => {
 
 const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
 
-    const { receiverId, userId } = req.body;
+    const {receiverId, userId } = req.body;
 
     if (!userId) {
         return res.status(401).json(new ApiError(401, "User ID is required"));
