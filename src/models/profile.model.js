@@ -42,9 +42,11 @@ const ProfileSchema = new mongoose.Schema(
       latitude: { type: String, required: false, min: -90, max: 90 },
       longitude: { type: String, required: false, min: -180, max: 180 },
     },
+    city: { type: String, default: "" },
     nativePlace: { type: String },
     dob: { type: Date },
-    edu: { type: String },
+    org: { type: String, default: "" },
+    profession: { type: String, default: "" },
     height: {
       type: String,
     },
