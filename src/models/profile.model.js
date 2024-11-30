@@ -26,6 +26,18 @@ const ProfileSchema = new mongoose.Schema(
       type: String,
       enum: ["m", "f", "o"],
     },
+    mainInterests: [
+      {
+        type: String,
+        default: "",
+      },
+    ],
+    interests: [
+      {
+        type: String,
+        default: "",
+      }
+    ],
     location: {
       latitude: { type: String, required: false, min: -90, max: 90 },
       longitude: { type: String, required: false, min: -180, max: 180 },
