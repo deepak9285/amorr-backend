@@ -55,6 +55,7 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
         mediaUrl: message.msg_mediaUrl,
     }));
 
+    
     return res.status(200).json(new ApiResponse(200, textMessages, "Messages fetched successfully"));
 
 });
