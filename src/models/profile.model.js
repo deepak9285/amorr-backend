@@ -26,10 +26,11 @@ const ProfileSchema = new mongoose.Schema(
       type: String,
       enum: ["m", "f", "o"],
     },
-    mainInterests: [
+    specInterests: [
       {
-        type: String,
-        default: "",
+        code: String,
+        title: String,
+        answer: String,
       },
     ],
     interests: [
