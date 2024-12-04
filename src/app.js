@@ -53,7 +53,7 @@ app.use(
 
 // abc();
 
-app.use(express.json());
+app.use(express.json()); 
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
