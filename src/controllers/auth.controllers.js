@@ -42,6 +42,7 @@ const sendEmailOtp = async (req, res) => {
     console.log('gen otp')
     // Generate a new otp
     const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
+  
     const mailOptions = {
       from: {
         name: process.env.AUTH_EMAIL_NAME,
@@ -51,7 +52,7 @@ const sendEmailOtp = async (req, res) => {
       subject: "Verify your Email",
       html: `<p>Enter <b>${otp}</b> in the app to verify your email address and complete your signup</p><p>This otp expires in 10 minutes.</p>`,
     };
-
+ console.log(otp);
     const hashedOtp = await bcrypt.hash(otp, 12);
     const newOtp = new Otp({
       email,
