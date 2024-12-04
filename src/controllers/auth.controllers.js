@@ -1,5 +1,6 @@
 import { Otp } from "../models/otp.model.js";
 import { User } from "../models/user.model.js";
+import { UserPreferences } from '../models/userPreference.model.js';
 import { ApiError, handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
@@ -276,9 +277,15 @@ const register = async (req, res) => {
       relationshipPreference: null,
       likes: []
     });
+    const newUserPrefernce = await UserPreferences.create({
+      userID: newUser._id,
+      relationshipPreference: "Life Long partner"
+    });
 
     newUser.profileID = newProfile._id;
     await newUser.save();
+    await newProfile.save();
+    await newUserPrefernce.save();
 
     return res.json(
       new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")

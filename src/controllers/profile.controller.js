@@ -26,14 +26,19 @@ const updateProfile = async (req, res) => {
       relationshipPreference,
       userPhotos,
     } = req.body;
-    
+
     console.log(req.body);
-    const { latitude, longitude } = location;
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+      return res.json(new ApiResponse(400, null, 'Invalid userID.'));
+    }
     //console.log(latitude);
-    const profile = await User.findById(new mongoose.Types.ObjectId(userID));
-    console.log("sdfsdf");
-    if (!profile) return res.json(new ApiResponse(404, null, 'User not found.'));
-    const updatedProfile = await Profile.findOneAndUpdate({ userID }, {
+    const user = await User.findById(new mongoose.Types.ObjectId(userID));
+    if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
+
+    const profile = await Profile.findById(user.profileID);
+    console.log(profile, "sdfsdf");
+    if (!profile) return res.json(new ApiResponse(404, null, 'Profile not found.'));
+    const updatedProfile = await Profile.findByIdAndUpdate(profile._id, {
       $set: {
         username: username || profile.name,
         profilePic: profilePic || profile.profilePic,
@@ -41,8 +46,8 @@ const updateProfile = async (req, res) => {
         gender: gender || profile.gender,
         lookingFor: lookingFor || profile.lookingFor,
         location: {
-          latitude: latitude || profile.location.latitude,
-          longitude: longitude || profile.location.longitude,
+          latitude: location.latitude || profile.location.latitude,
+          longitude: location.longitude || profile.location.longitude,
         },
         dob: dob || profile.dob,
         height: height || profile.height,
@@ -145,6 +150,7 @@ const fetch_by_preferences = async (req, res) => {
     if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
 
     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
+    console.log('User found:', userPreferences);
     if (!userPreferences) return res.json(new ApiResponse(404, null, 'User not found.'));
 
     console.log('User found1:', userPreferences);

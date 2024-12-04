@@ -6,7 +6,7 @@ dotenv.config({ path: ".env" });
 const transporter = nodemailer.createTransport({    
   host: "smtpout.secureserver.net",  
   secure: true,
-  secureConnection: false, // TLS requires secureConnection to be false
+  secureConnection: false,
   tls: {
       ciphers:'SSLv3'
   },
