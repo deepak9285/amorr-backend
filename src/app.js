@@ -24,6 +24,9 @@ app.set("io", io);
 app.get("/health", (req, res) => {
     res.send("Health OK");
 });
+app.get('/api/chat/oneOnone', (req, res) => {
+    res.json({ message: "API is working" });
+  });
 
 // middlewares
 app.use(
@@ -80,4 +83,25 @@ export { httpServer };
 //     })()
 // }
 
+<<<<<<< HEAD
 // abc();
+=======
+// abc();
+
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.static("public"));
+app.use(cookieParser());
+
+app.use("/api/auth", authRouter);
+app.use("/api/profile", profileRouter);
+app.use("/api/S3Bucket",S3BucketRouter);
+app.use("/api/chat", chatRouter);
+app.use("/api/message", messRouter);
+app.use("/api/notification", notiRouter);
+app.use("/api/preference", userPreferenceRouter);
+app.use("/api/game", gameRouter);
+app.use("/api/points", pointsRouter);
+app.use("/api/swipe", swipeRouter);
+export { httpServer };
+>>>>>>> 70324a80db4e701afb710092187146255d500d57

@@ -36,9 +36,9 @@ const sendEmailOtp = async (req, res) => {
     await Otp.deleteMany({ email });
     const user = await User.findOne({ email });
     console.log(user);
-    if (user?.isEmailVerified) {
-      return res.json(new ApiResponse(409, "Email already verified!"));
-    }
+    // if (user?.isEmailVerified) {
+    //   return res.json(new ApiResponse(409, "Email already verified!"));
+    // }
     console.log('gen otp')
     // Generate a new otp
     const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
@@ -72,12 +72,13 @@ const sendEmailOtp = async (req, res) => {
 const verifyEmailOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-
+    
     if (!email || !otp) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
 
     const hashedOtp = await Otp.findOne({ email });
+    console.log("hashedotp",hashedOtp);
 
     if (!hashedOtp) {
       return res.json(new ApiResponse(404, "Otp not found"));
@@ -149,6 +150,29 @@ const loginUser = async (req, res) => {
   try {
     const { email, password, otp } = req.body;
 
+<<<<<<< HEAD
+    // Ensure email is provided
+    console.log(email,otp);
+    if (!email) {
+      return res.json(new ApiResponse(410, "Email is required"));
+    }
+
+    // Case 1: Login using password
+    if (password) {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.json(new ApiResponse(404, null, "User not found"));
+      }
+
+      const isPasswordValid = await user.isPasswordCorrect(password);
+      if (!isPasswordValid) {
+        return res.json(new ApiResponse(401, null, "Incorrect password"));
+      }
+
+      // Generate tokens
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+=======
     if (!email) {
       return res.json(new ApiResponse(410, "Email is required!"));
     }
@@ -178,6 +202,7 @@ const loginUser = async (req, res) => {
 
       await Otp.deleteOne({ email });
 
+>>>>>>> 3285394c60ff80bb8b2a2cf82f47c42fa7d27a55
       const options = {
         httpOnly: true,
         secure: true,
@@ -187,41 +212,60 @@ const loginUser = async (req, res) => {
 
       const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
-      return res
-        .status(200)
-        .cookie("refreshToken", refreshToken, options)
+      return res.status(200)
         .cookie("accessToken", accessToken, options)
-        .json(new ApiResponse(200, loggedInUser, "User logged in successfully via OTP."));
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, loggedInUser, "User logged in successfully"));
     }
 
-    // Handle Password-based login
-    if (!password) {
-      return res.json(new ApiResponse(410, "Password is required for password login!"));
+    // Case 2: Login using OTP
+    if (otp) {
+      const storedOtp = await Otp.findOne({ email });
+      console.log(storedOtp);
+      if (!storedOtp) {
+        return res.json(new ApiResponse(404, "OTP not found"));
+      }
+
+      // OTP expiration check
+      const { createdAt } = storedOtp;
+      if (createdAt < Date.now() - 600000) { // 10 minutes expiration
+        return res.json(new ApiResponse(422, "OTP has expired, please request again"));
+      }
+
+      // OTP verification
+      const verify = await bcrypt.compare(otp, storedOtp.otp);
+      if (!verify) {
+        return res.json(new ApiResponse(400, "Incorrect OTP"));
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.json(new ApiResponse(404, null, "User not found"));
+      }
+
+      // Generate tokens for OTP-based login
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+      const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+      };
+      await Otp.deleteOne({ email });
+      const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+     console.log(loggedInUser);
+      return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, loggedInUser, "User logged in successfully with OTP"));
     }
 
-    const isPasswordValid = await user.isPasswordCorrect(password);
-    if (!isPasswordValid) {
-      return res.json(new ApiResponse(401, null, "Password incorrect!"));
-    }
-
-    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
-
-    const options = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-    };
-
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-
-    return res
-      .status(200)
-      .cookie("refreshToken", refreshToken, options)
-      .cookie("accessToken", accessToken, options)
-      .json(new ApiResponse(200, loggedInUser, "User logged in successfully via password."));
+    // If neither password nor OTP is provided
+    return res.json(new ApiResponse(410, "Password or OTP is required"));
   } catch (err) {
-    return handleErr(res, err);
+    console.log(err);
+    return res.json(new ApiError(400, "Login failed", err.message));
   }
 };
 
