@@ -11,6 +11,123 @@ import { Match } from "../models/Match.model.js";
 // import haversine from 'haversine-distance';
 
 
+// const updateProfile = async (req, res) => {
+//   try {
+//     const {
+//       username,
+//       userID,
+//       profilePic,
+//       bio,
+//       gender,
+//       dob,
+//       lookingFor,
+//       height,
+//       location,
+//       relationshipPreference,
+//       userPhotos,
+//     } = req.body;
+
+//     console.log(req.body);
+//     if (!mongoose.Types.ObjectId.isValid(userID)) {
+//       return res.json(new ApiResponse(400, null, 'Invalid userID.'));
+//     }
+//     //console.log(latitude);
+//     const user = await User.findById(new mongoose.Types.ObjectId(userID));
+//     if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
+
+//     const profile = await Profile.findById(user.profileID);
+//     console.log(profile, "sdfsdf");
+//     if (!profile) return res.json(new ApiResponse(404, null, 'Profile not found.'));
+//     const updatedProfile = await Profile.findByIdAndUpdate(profile._id, {
+//       $set: {
+//         username: username || profile.name,
+//         profilePic: profilePic || profile.profilePic,
+//         bio: bio || profile.bio,
+//         gender: gender || profile.gender,
+//         lookingFor: lookingFor || profile.lookingFor,
+//         location: {
+//           latitude: location.latitude || profile.location.latitude,
+//           longitude: location.longitude || profile.location.longitude,
+//         },
+//         dob: dob || profile.dob,
+//         height: height || profile.height,
+//         relationshipPreference: relationshipPreference || profile.relationshipPreference,
+//         userPhotos: userPhotos || profile.userPhotos,
+//       }
+//     });
+//     if (!updatedProfile) return res.json(new ApiResponse(500, null, "Unable to update profile , due to unexpected error."));
+//     return res.json(new ApiResponse(200, updatedProfile, 'Profile updated'));
+//   }
+//   catch (err) {
+//     return handleErr(res, err);
+//   }
+// }
+
+// const updateProfile = async (req, res) => {
+//   try {
+//     const {
+//       username,
+//       userID,
+//       profilePic,
+//       bio,
+//       gender,
+//       dob,
+//       lookingFor,
+//       height,
+//       location,
+//       relationshipPreference,
+//       userPhotos,
+//       specInterests,
+//     } = req.body;
+
+//     console.log(req.body);
+
+//     if (!mongoose.Types.ObjectId.isValid(userID)) {
+//       return res.json(new ApiResponse(400, null, 'Invalid userID.'));
+//     }
+
+//     const user = await User.findById(new mongoose.Types.ObjectId(userID));
+//     if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
+
+//     const profile = await Profile.findById(user.profileID);
+//     console.log(profile, 'Profile fetched');
+//     if (!profile) return res.json(new ApiResponse(404, null, 'Profile not found.'));
+
+//     // Update the profile
+//     const updatedProfile = await Profile.findByIdAndUpdate(
+//       profile._id,
+//       {
+//         $set: {
+//           username: username || profile.username,
+//           profilePic: profilePic || profile.profilePic,
+//           bio: bio || profile.bio,
+//           gender: gender || profile.gender,
+//           lookingFor: lookingFor || profile.lookingFor,
+//           location: {
+//             latitude: location?.latitude || profile.location.latitude,
+//             longitude: location?.longitude || profile.location.longitude,
+//           },
+//           dob: dob || profile.dob,
+//           height: height || profile.height,
+//           relationshipPreference: relationshipPreference || profile.relationshipPreference,
+//           userPhotos: userPhotos || profile.userPhotos,
+//           specInterests: specInterests || profile.specInterests,
+//         },
+//       },
+//       { new: true } 
+//     );
+
+//     if (!updatedProfile) {
+//       return res.json(new ApiResponse(500, null, 'Unable to update profile due to unexpected error.'));
+//     }
+
+//     return res.json(new ApiResponse(200, updatedProfile, 'Profile updated successfully.'));
+//   } catch (err) {
+//     return handleErr(res, err);
+//   }
+// };
+
+
 const updateProfile = async (req, res) => {
   try {
     const {
@@ -25,43 +142,67 @@ const updateProfile = async (req, res) => {
       location,
       relationshipPreference,
       userPhotos,
+      specInterests,
+      interests,
+      promptsAnswers,
     } = req.body;
 
-    console.log(req.body);
+    console.log('Request body:', req.body);
+
     if (!mongoose.Types.ObjectId.isValid(userID)) {
       return res.json(new ApiResponse(400, null, 'Invalid userID.'));
     }
-    //console.log(latitude);
-    const user = await User.findById(new mongoose.Types.ObjectId(userID));
+
+    const user = await User.findById(userID);
     if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
 
     const profile = await Profile.findById(user.profileID);
-    console.log(profile, "sdfsdf");
     if (!profile) return res.json(new ApiResponse(404, null, 'Profile not found.'));
-    const updatedProfile = await Profile.findByIdAndUpdate(profile._id, {
-      $set: {
-        username: username || profile.name,
-        profilePic: profilePic || profile.profilePic,
-        bio: bio || profile.bio,
-        gender: gender || profile.gender,
-        lookingFor: lookingFor || profile.lookingFor,
-        location: {
-          latitude: location.latitude || profile.location.latitude,
-          longitude: location.longitude || profile.location.longitude,
-        },
-        dob: dob || profile.dob,
-        height: height || profile.height,
-        relationshipPreference: relationshipPreference || profile.relationshipPreference,
-        userPhotos: userPhotos || profile.userPhotos,
-      }
-    });
-    if (!updatedProfile) return res.json(new ApiResponse(500, null, "Unable to update profile , due to unexpected error."));
-    return res.json(new ApiResponse(200, updatedProfile, 'Profile updated'));
-  }
-  catch (err) {
+
+    if (interests && (!Array.isArray(interests) || interests.length < 2)) {
+      return res.json(
+        new ApiResponse(400, null, 'Please provide at least two valid interests.')
+      );
+    }
+
+    const updateData = {
+      username: username || profile.username,
+      profilePic: profilePic || profile.profilePic,
+      bio: bio || profile.bio,
+      gender: gender || profile.gender,
+      lookingFor: lookingFor || profile.lookingFor,
+      dob: dob || profile.dob,
+      height: height || profile.height,
+      relationshipPreference: relationshipPreference || profile.relationshipPreference,
+      userPhotos: userPhotos || profile.userPhotos,
+      specInterests: specInterests || profile.specInterests,
+      interests: interests || profile.interests,
+      promptsAnswers: promptsAnswers || profile.promptsAnswers,
+      location: {
+        latitude: location?.latitude || profile.location.latitude,
+        longitude: location?.longitude || profile.location.longitude,
+      },
+    };
+
+    const updatedProfile = await Profile.findByIdAndUpdate(
+      profile._id,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedProfile) {
+      return res.json(
+        new ApiResponse(500, null, 'Unable to update profile due to unexpected error.')
+      );
+    }
+
+    return res.json(new ApiResponse(200, updatedProfile, 'Profile updated successfully.'));
+  } catch (err) {
+    console.error('Error updating profile:', err);
     return handleErr(res, err);
   }
-}
+};
+
 
 // done
 const like_profile = async (req, res) => {
