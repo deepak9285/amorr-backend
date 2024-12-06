@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 import generateHash from "../utils/generateHash.js";
 import { User } from "../models/user.model.js";
 import { Chat } from "../models/chat.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { Profile } from "../models/profile.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { emitSocketEvent } from "../socket/socket.js";
 import { ChatEventEnum } from "../socket/chatEvents.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 
 // const swipe = async (req, res) => {
 //     const { profileID, targetUserId, action } = req.body;
@@ -195,7 +195,7 @@ const swipe = async (req, res) => {
             user.matches[userMatchIndex].status = 'accepted';
             targetUser.matches[targetUserMatchIndex].status = 'accepted';
 
-            const chat = createOrGetAOneOnOneChat(profileID, targetUserId);
+            const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
 
             user.markModified('matches');
             targetUser.markModified('matches');
@@ -203,7 +203,7 @@ const swipe = async (req, res) => {
             await user.save();
             await targetUser.save();
 
-            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted'));
+            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted, chat created'));
         } else {
             if (userMatchIndex === -1 || targetUserMatchIndex === -1) {
                 user.matches.push({
@@ -235,7 +235,9 @@ const swipe = async (req, res) => {
             user.markModified('dislikes');
             await user.save();
 
-            return res.json(new ApiResponse(200, user, 'Swipe recorded, match requests created with pending status.'));
+            const chat = await createOrGetAOneOnOneChat(user.userID, targetUser.userID);
+
+            return res.json(new ApiResponse(200, user, "Chats",chat,'Swipe recorded, match requests created with pending status.'));
         }
     } catch (error) {
         console.error("Error in swipe API:", error);
@@ -257,12 +259,21 @@ const getMatchesByStatus = async (req, res) => {
         if (!user) {
             return res.status(404).json(new ApiResponse(404, null, 'User not found'));
         }
-        const matches = user.matches.filter(match => match.status === status);
+
+        let matches = user.matches.filter(match => match.status === status);
+
+        // Filter pending matches where the user is the receiver
+        if (status === 'pending') {
+            matches = matches.filter(match => match.recieverID.toString() === profileId);
+        }
+
         return res.status(200).json(new ApiResponse(200, matches, 'Matches fetched successfully'));
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, error, 'Server error'));
+        console.error("Error in getMatchesByStatus:", error);
+        return res.status(500).json(new ApiResponse(500, error.message || error, 'Server error'));
     }
 };
+
 
 
 const updateMatchStatus = async (req, res) => {

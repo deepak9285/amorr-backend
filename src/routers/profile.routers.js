@@ -2,7 +2,7 @@ import { Router } from "express";
 import { fetch_by_preferences, like_profile, updateProfile, calculateProfileCompleteness, fetch_by_id } from "../controllers/profile.controller.js";
 import { uploadFile } from "../utils/aws.js";
 
-const router = Router();
+const   router = Router();
 
 router.route("/update").post(updateProfile);
 router.route("/fetch/by-preference").post(fetch_by_preferences);
