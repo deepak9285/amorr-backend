@@ -42,7 +42,7 @@ const sendEmailOtp = async (req, res) => {
     console.log('gen otp')
     // Generate a new otp
     const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
-  
+
     const mailOptions = {
       from: {
         name: process.env.AUTH_EMAIL_NAME,
@@ -52,7 +52,7 @@ const sendEmailOtp = async (req, res) => {
       subject: "Verify your Email",
       html: `<p>Enter <b>${otp}</b> in the app to verify your email address and complete your signup</p><p>This otp expires in 10 minutes.</p>`,
     };
- console.log(otp);
+    console.log(otp);
     const hashedOtp = await bcrypt.hash(otp, 12);
     const newOtp = new Otp({
       email,
@@ -72,13 +72,13 @@ const sendEmailOtp = async (req, res) => {
 const verifyEmailOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    
+
     if (!email || !otp) {
       return res.json(new ApiResponse(410, "All fields are required!"));
     }
 
     const hashedOtp = await Otp.findOne({ email });
-    console.log("hashedotp",hashedOtp);
+    console.log("hashedotp", hashedOtp);
 
     if (!hashedOtp) {
       return res.json(new ApiResponse(404, "Otp not found"));
@@ -150,29 +150,6 @@ const loginUser = async (req, res) => {
   try {
     const { email, password, otp } = req.body;
 
-<<<<<<< HEAD
-    // Ensure email is provided
-    console.log(email,otp);
-    if (!email) {
-      return res.json(new ApiResponse(410, "Email is required"));
-    }
-
-    // Case 1: Login using password
-    if (password) {
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.json(new ApiResponse(404, null, "User not found"));
-      }
-
-      const isPasswordValid = await user.isPasswordCorrect(password);
-      if (!isPasswordValid) {
-        return res.json(new ApiResponse(401, null, "Incorrect password"));
-      }
-
-      // Generate tokens
-      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
-
-=======
     if (!email) {
       return res.json(new ApiResponse(410, "Email is required!"));
     }
@@ -202,7 +179,6 @@ const loginUser = async (req, res) => {
 
       await Otp.deleteOne({ email });
 
->>>>>>> 3285394c60ff80bb8b2a2cf82f47c42fa7d27a55
       const options = {
         httpOnly: true,
         secure: true,
@@ -254,7 +230,7 @@ const loginUser = async (req, res) => {
       };
       await Otp.deleteOne({ email });
       const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-     console.log(loggedInUser);
+      console.log(loggedInUser);
       return res.status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
@@ -449,7 +425,7 @@ const forgetPassword = async (req, res) => {
     const newHashedPassword = await bcrypt.hash(newPassword, 12);
 
     user.password = newHashedPassword;
-    user.resetPasswordToken = null; 
+    user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
     await user.save();
 
