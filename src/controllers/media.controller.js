@@ -1,5 +1,5 @@
 import https from 'https';
-import fs from 'fs';
+import fs, { fdatasync } from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import axios from 'axios';
@@ -46,6 +46,14 @@ export const handleFileUpload = async (file, email) => {
     );
 
     if (response.data) {
+        fs.unlink(file.path, (err) => {
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.log('File deleted successfully');
+            }
+        });
         return `https://amorr.b-cdn.net/amorr/users/${email}/${uniqueFilename}`;
     } else {
         return false;
