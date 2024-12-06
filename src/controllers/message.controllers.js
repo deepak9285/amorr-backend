@@ -43,7 +43,7 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
     }
 
     const messages = await ChatMessage.find({ msg_conversation_hash: chatId, msg_deleted_status: false })
-        .sort({ msg_timestamp: -1 })
+        .sort({ msg_timestamp: 1 })
         .populate("msg_sender_amorr_id", "username")
         .populate("msg_conversation_hash", "name isGroup");
 

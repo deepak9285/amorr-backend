@@ -1,5 +1,6 @@
 import { Otp } from "../models/otp.model.js";
 import { User } from "../models/user.model.js";
+import { UserPreferences } from '../models/userPreference.model.js';
 import { ApiError, handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
@@ -41,6 +42,7 @@ const sendEmailOtp = async (req, res) => {
     console.log('gen otp')
     // Generate a new otp
     const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
+  
     const mailOptions = {
       from: {
         name: process.env.AUTH_EMAIL_NAME,
@@ -50,7 +52,7 @@ const sendEmailOtp = async (req, res) => {
       subject: "Verify your Email",
       html: `<p>Enter <b>${otp}</b> in the app to verify your email address and complete your signup</p><p>This otp expires in 10 minutes.</p>`,
     };
-
+ console.log(otp);
     const hashedOtp = await bcrypt.hash(otp, 12);
     const newOtp = new Otp({
       email,
@@ -148,6 +150,7 @@ const loginUser = async (req, res) => {
   try {
     const { email, password, otp } = req.body;
 
+<<<<<<< HEAD
     // Ensure email is provided
     console.log(email,otp);
     if (!email) {
@@ -169,6 +172,37 @@ const loginUser = async (req, res) => {
       // Generate tokens
       const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
+=======
+    if (!email) {
+      return res.json(new ApiResponse(410, "Email is required!"));
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json(new ApiResponse(404, null, "User not found!"));
+    }
+
+    if (otp) {
+      const existingOtp = await Otp.findOne({ email });
+      if (!existingOtp) {
+        return res.json(new ApiResponse(404, null, "OTP not found or expired."));
+      }
+
+      // Check if OTP has expired (10 minutes)
+      if (existingOtp.createdAt < Date.now() - 600000) {
+        return res.json(new ApiResponse(422, null, "OTP has expired. Please request a new one."));
+      }
+
+      const isOtpValid = bcrypt.compareSync(otp, existingOtp.otp);
+      if (!isOtpValid) {
+        return res.json(new ApiResponse(401, null, "Invalid OTP."));
+      }
+
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+      await Otp.deleteOne({ email });
+
+>>>>>>> 3285394c60ff80bb8b2a2cf82f47c42fa7d27a55
       const options = {
         httpOnly: true,
         secure: true,
@@ -235,6 +269,7 @@ const loginUser = async (req, res) => {
   }
 };
 
+
 const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -272,7 +307,7 @@ const register = async (req, res) => {
       userID: newUser._id,
       profileHash: profileHash,
       amorrID: amorrID,
-      userName: username,
+      username: username,
       profilePic: "",
       bio: "",
       gender: null,
@@ -286,9 +321,15 @@ const register = async (req, res) => {
       relationshipPreference: null,
       likes: []
     });
+    const newUserPrefernce = await UserPreferences.create({
+      userID: newUser._id,
+      relationshipPreference: "Life Long partner"
+    });
 
     newUser.profileID = newProfile._id;
     await newUser.save();
+    await newProfile.save();
+    await newUserPrefernce.save();
 
     return res.json(
       new ApiResponse(201, { user: newUser, profile: newProfile }, "User and Profile registered successfully!")
@@ -344,38 +385,81 @@ const sendForgetPasswordMail = async (req, res) => {
   }
 }
 
+// const forgetPassword = async (req, res) => {
+//   try {
+
+//     const { password, newPassword } = req.body;
+
+//     const { token } = req.params;
+
+//     const user = await User.findOne({ resetPasswordToken: token });
+
+//     if (!user) return res.json(new ApiResponse(401, null, 'Unauthorized! Invalid Token!'));
+
+//     if (user.resetPasswordExpires < Date.now()) {
+//       return res.json(new ApiResponse(403, null, 'Token expired.'));
+//     }
+
+
+
+//     const passwordCheck = await bcrypt.compare(user.password, password);
+
+//     if (!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
+
+//     const newHashedPassword = await bcrypt.hash(newPassword, 12);
+
+//     const updatedUser = await User.findByIdAndUpdate(userID, { $set: { password: newHashedPassword } });
+
+//     return res.json(new ApiResponse(200, updatedUser, 'Password changed successfully.'));
+
+//   }
+//   catch (err) {
+//     return handleErr(res, err);
+//   }
+// }
+
 const forgetPassword = async (req, res) => {
   try {
+    const { email, otp, newPassword } = req.body;
 
-    const { password, newPassword } = req.body;
-
-    const { token } = req.params;
-
-    const user = await User.findOne({ resetPasswordToken: token });
-
-    if (!user) return res.json(new ApiResponse(401, null, 'Unauthorized! Invalid Token!'));
-
-    if (user.resetPasswordExpires < Date.now()) {
-      return res.json(new ApiResponse(403, null, 'Token expired.'));
+    if (!email || !otp || !newPassword) {
+      return res.json(new ApiResponse(400, null, "All fields are required (email, OTP, newPassword)."));
     }
 
+    const otpEntry = await Otp.findOne({ email });
+    if (!otpEntry) {
+      return res.json(new ApiResponse(404, null, "OTP not found or expired."));
+    }
 
+    // Check if OTP has expired (10 minutes)
+    if (otpEntry.createdAt < Date.now() - 600000) {
+      return res.json(new ApiResponse(422, null, "OTP has expired. Please request a new one."));
+    }
 
-    const passwordCheck = await bcrypt.compare(user.password, password);
+    const isOtpValid = bcrypt.compareSync(otp, otpEntry.otp);
+    if (!isOtpValid) {
+      return res.json(new ApiResponse(401, null, "Invalid OTP."));
+    }
 
-    if (!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json(new ApiResponse(404, null, "User not found."));
+    }
 
     const newHashedPassword = await bcrypt.hash(newPassword, 12);
 
-    const updatedUser = await User.findByIdAndUpdate(userID, { $set: { password: newHashedPassword } });
+    user.password = newHashedPassword;
+    user.resetPasswordToken = null; 
+    user.resetPasswordExpires = null;
+    await user.save();
 
-    return res.json(new ApiResponse(200, updatedUser, 'Password changed successfully.'));
+    await Otp.deleteOne({ email });
 
-  }
-  catch (err) {
+    return res.json(new ApiResponse(200, null, "Password changed successfully."));
+  } catch (err) {
     return handleErr(res, err);
   }
-}
+};
 
 const getUserById = async (req, res) => {
   try {
