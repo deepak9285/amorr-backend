@@ -178,6 +178,18 @@ const loginUser = async (req, res) => {
         user._id
       );
 
+<<<<<<< HEAD
+=======
+      const isOtpValid = bcrypt.compareSync(otp, existingOtp.otp);
+      if (!isOtpValid) {
+        return res.json(new ApiResponse(401, null, "Invalid OTP."));
+      }
+
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+      await Otp.deleteOne({ email });
+
+>>>>>>> a173246808796d02f41162ccf99e252d78d60d19
       const options = {
         httpOnly: true,
         secure: true,
@@ -243,6 +255,7 @@ const loginUser = async (req, res) => {
       };
 
       await Otp.deleteOne({ email });
+<<<<<<< HEAD
 
       const loggedInUser = await User.findById(user._id).select(
         "-password -refreshToken"
@@ -250,6 +263,11 @@ const loginUser = async (req, res) => {
 
       return res
         .status(200)
+=======
+      const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+      console.log(loggedInUser);
+      return res.status(200)
+>>>>>>> a173246808796d02f41162ccf99e252d78d60d19
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
         .json(
