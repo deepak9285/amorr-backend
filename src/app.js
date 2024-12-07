@@ -19,14 +19,14 @@ const app = express();
 dotenv.config();
 const httpServer = createServer(app);
 const io = setupSocketIO(httpServer);
-app.set("io", io); 
+app.set("io", io);
 
 app.get("/health", (req, res) => {
     res.send("Health OK");
 });
 app.get('/api/chat/oneOnone', (req, res) => {
     res.json({ message: "API is working" });
-  });
+});
 
 // middlewares
 app.use(
@@ -36,11 +36,11 @@ app.use(
         credentials: true,
         allowedHeaders: "Authorization, Content-Type, Accept",
         optionsSuccessStatus: 200,
-        exposedHeaders: ["set-cookie"], 
+        exposedHeaders: ["set-cookie"],
     })
 );
 
-app.use(express.json()); 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
 app.use(express.static("uploads"));  // Serve uploaded files from the "uploads" folder
