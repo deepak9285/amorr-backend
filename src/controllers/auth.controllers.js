@@ -147,39 +147,160 @@ const verifyEmailOtp = async (req, res) => {
 //   }
 // };
 
+// const loginUser = async (req, res) => {
+//   try {
+//     const { email, password, otp } = req.body;
+
+//     // Validate email
+//     if (!email) {
+//       return res
+//         .status(400)
+//         .json(new ApiResponse(400, null, "Email is required!"));
+//     }
+
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json(new ApiResponse(404, null, "User not found!"));
+//     }
+
+//     // Case 1: Login using Password
+//     if (password) {
+//       const isPasswordValid = await bcrypt.compare(password, user.password);
+//       if (!isPasswordValid) {
+//         return res
+//           .status(401)
+//           .json(new ApiResponse(401, null, "Invalid password!"));
+//       }
+
+//       // const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+//       //   user._id
+//       // );
+
+//       const isOtpValid = bcrypt.compareSync(otp, existingOtp.otp);
+//       if (!isOtpValid) {
+//         return res.json(new ApiResponse(401, null, "Invalid OTP."));
+//       }
+
+//       const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+//       await Otp.deleteOne({ email });
+
+//       const options = {
+//         httpOnly: true,
+//         secure: true,
+//         sameSite: "None",
+//         path: "/",
+//       };
+
+//       const loggedInUser = await User.findById(user._id).select(
+//         "-password -refreshToken"
+//       );
+
+//       return res
+//         .status(200)
+//         .cookie("accessToken", accessToken, options)
+//         .cookie("refreshToken", refreshToken, options)
+//         .json(
+//           new ApiResponse(
+//             200,
+//             loggedInUser,
+//             "User logged in successfully with password"
+//           )
+//         );
+//     }
+
+//     // Case 2: Login using OTP
+//     if (otp) {
+//       const storedOtp = await Otp.findOne({ email });
+//       if (!storedOtp) {
+//         return res
+//           .status(404)
+//           .json(new ApiResponse(404, null, "OTP not found or expired."));
+//       }
+
+//       // Check if OTP has expired (10 minutes expiration)
+//       if (storedOtp.createdAt < Date.now() - 600000) {
+//         await Otp.deleteOne({ email }); // Clean up expired OTP
+//         return res
+//           .status(422)
+//           .json(
+//             new ApiResponse(
+//               422,
+//               null,
+//               "OTP has expired. Please request a new one."
+//             )
+//           );
+//       }
+
+//       // Validate OTP
+//       const isOtpValid = bcrypt.compareSync(otp, storedOtp.otp);
+//       if (!isOtpValid) {
+//         return res.status(401).json(new ApiResponse(401, null, "Invalid OTP."));
+//       }
+
+//       const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+//         user._id
+//       );
+
+//       const options = {
+//         httpOnly: true,
+//         secure: true,
+//         sameSite: "None",
+//         path: "/",
+//       };
+
+//       await Otp.deleteOne({ email });
+//       const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+//       console.log(loggedInUser);
+//       return res.status(200)
+//         .cookie("accessToken", accessToken, options)
+//         .cookie("refreshToken", refreshToken, options)
+//         .json(
+//           new ApiResponse(
+//             200,
+//             loggedInUser,
+//             "User logged in successfully with OTP"
+//           )
+//         );
+//     }
+
+//     // If neither password nor OTP is provided
+//     return res
+//       .status(400)
+//       .json(new ApiResponse(400, null, "Password or OTP is required"));
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(500).json(new ApiError(500, "Login failed", err.message));
+//   }
+// };
+
+
 const loginUser = async (req, res) => {
   try {
     const { email, password, otp } = req.body;
 
-    // Validate email
     if (!email) {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, null, "Email is required!"));
+      return res.json(new ApiResponse(410, "Email is required!"));
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res
-        .status(404)
-        .json(new ApiResponse(404, null, "User not found!"));
+      return res.json(new ApiResponse(404, null, "User not found!"));
     }
 
-    // Case 1: Login using Password
-    if (password) {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res
-          .status(401)
-          .json(new ApiResponse(401, null, "Invalid password!"));
+    if (otp) {
+      const existingOtp = await Otp.findOne({ email });
+      if (!existingOtp) {
+        return res.json(new ApiResponse(404, null, "OTP not found or expired."));
       }
 
-      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-        user._id
-      );
+      // Check if OTP has expired (10 minutes)
+      if (existingOtp.createdAt < Date.now() - 600000) {
+        return res.json(new ApiResponse(422, null, "OTP has expired. Please request a new one."));
+      }
 
-<<<<<<< HEAD
-=======
       const isOtpValid = bcrypt.compareSync(otp, existingOtp.otp);
       if (!isOtpValid) {
         return res.json(new ApiResponse(401, null, "Invalid OTP."));
@@ -189,7 +310,6 @@ const loginUser = async (req, res) => {
 
       await Otp.deleteOne({ email });
 
->>>>>>> a173246808796d02f41162ccf99e252d78d60d19
       const options = {
         httpOnly: true,
         secure: true,
@@ -197,95 +317,43 @@ const loginUser = async (req, res) => {
         path: "/",
       };
 
-      const loggedInUser = await User.findById(user._id).select(
-        "-password -refreshToken"
-      );
-
-      return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(
-          new ApiResponse(
-            200,
-            loggedInUser,
-            "User logged in successfully with password"
-          )
-        );
-    }
-
-    // Case 2: Login using OTP
-    if (otp) {
-      const storedOtp = await Otp.findOne({ email });
-      if (!storedOtp) {
-        return res
-          .status(404)
-          .json(new ApiResponse(404, null, "OTP not found or expired."));
-      }
-
-      // Check if OTP has expired (10 minutes expiration)
-      if (storedOtp.createdAt < Date.now() - 600000) {
-        await Otp.deleteOne({ email }); // Clean up expired OTP
-        return res
-          .status(422)
-          .json(
-            new ApiResponse(
-              422,
-              null,
-              "OTP has expired. Please request a new one."
-            )
-          );
-      }
-
-      // Validate OTP
-      const isOtpValid = bcrypt.compareSync(otp, storedOtp.otp);
-      if (!isOtpValid) {
-        return res.status(401).json(new ApiResponse(401, null, "Invalid OTP."));
-      }
-
-      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-        user._id
-      );
-
-      const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-        path: "/",
-      };
-
-      await Otp.deleteOne({ email });
-<<<<<<< HEAD
-
-      const loggedInUser = await User.findById(user._id).select(
-        "-password -refreshToken"
-      );
-
-      return res
-        .status(200)
-=======
       const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-      console.log(loggedInUser);
-      return res.status(200)
->>>>>>> a173246808796d02f41162ccf99e252d78d60d19
-        .cookie("accessToken", accessToken, options)
+
+      return res
+        .status(200)
         .cookie("refreshToken", refreshToken, options)
-        .json(
-          new ApiResponse(
-            200,
-            loggedInUser,
-            "User logged in successfully with OTP"
-          )
-        );
+        .cookie("accessToken", accessToken, options)
+        .json(new ApiResponse(200, loggedInUser, "User logged in successfully via OTP."));
     }
 
-    // If neither password nor OTP is provided
+    // Handle Password-based login
+    if (!password) {
+      return res.json(new ApiResponse(410, "Password is required for password login!"));
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if (!isPasswordValid) {
+      return res.json(new ApiResponse(401, null, "Password incorrect!"));
+    }
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
+    };
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
     return res
-      .status(400)
-      .json(new ApiResponse(400, null, "Password or OTP is required"));
+      .status(200)
+      .cookie("refreshToken", refreshToken, options)
+      .cookie("accessToken", accessToken, options)
+      .json(new ApiResponse(200, loggedInUser, "User logged in successfully via password."));
   } catch (err) {
-    console.error(err);
-    return res.status(500).json(new ApiError(500, "Login failed", err.message));
+    return handleErr(res, err);
   }
 };
 
