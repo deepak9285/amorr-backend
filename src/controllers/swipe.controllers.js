@@ -167,6 +167,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (userId, receiverId) => {
 
 const swipe = async (req, res) => {
     const { profileID, targetUserId, action } = req.body;
+    console.log(profileID,targetUserId,action);
 
     if (!profileID || !targetUserId || !['like', 'dislike'].includes(action)) {
         return res.json(new ApiResponse(404, null, 'Invalid request'));
@@ -255,7 +256,7 @@ const getMatchesByStatus = async (req, res) => {
 
     try {
         const user = await Profile.findById(profileId);
-
+         console.log(user);
         if (!user) {
             return res.status(404).json(new ApiResponse(404, null, 'User not found'));
         }
@@ -266,6 +267,7 @@ const getMatchesByStatus = async (req, res) => {
         if (status === 'pending') {
             matches = matches.filter(match => match.recieverID.toString() === profileId);
         }
+        console.log(matches);
 
         return res.status(200).json(new ApiResponse(200, matches, 'Matches fetched successfully'));
     } catch (error) {

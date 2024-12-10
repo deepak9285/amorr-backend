@@ -18,15 +18,16 @@ const getAllChats = asyncHandler(async (req, res) => {
   if (!user) {
     return new ApiError(404, "User not found");
   }
-
+  const profileID=user.profileID;
+  console.log("profileid",profileID);
+  console.log("userId",user._id);
   req.user = user;
 
   const chats = await Chat.find({
-    participants: user._id,
+    participants: profileID,
   })
     .sort({ updatedAt: -1 })
     .populate("chatId");
-
   return res
     .status(200)
     .json(
@@ -145,7 +146,7 @@ const getUserStatus = asyncHandler(async (req, res) => {
 
 const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
     const { userProfileID, receiverProfileID } = req.body; // Use profile IDs instead of actual IDs.
-  
+    console.log(userProfileID,receiverProfileID);
     if (!userProfileID || !receiverProfileID) {
       return res
         .status(401)
@@ -154,6 +155,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
   
     // Fetch sender (user) by profileID
     const user = await User.findOne({ profileID: userProfileID });
+    console.log(user);
     if (!user) {
       return res
         .status(404)
@@ -179,7 +181,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
     // Check if a chat already exists between these users
     const existingChat = await Chat.findOne({
       isGroup: false,
-      participants: { $all: [req.user._id, receiver._id] },
+      participants: { $all: [req.user.profileID, receiver.profileID] },
     })
       .populate("participants", "username profileID email")
       .populate("lastMessage")
@@ -200,7 +202,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
     const newChatInstance = await Chat.create({
       chatId: chatId,
       name: "One on one chat",
-      participants: [req.user._id, receiver._id],
+      participants: [req.user.profileID, receiver.profileID],
       admin: req.user._id,
     });
   

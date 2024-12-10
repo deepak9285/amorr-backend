@@ -38,7 +38,7 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
     }
     req.user = user;
 
-    if (!selectedChat.participants?.includes(req.user._id)) {
+    if (!selectedChat.participants?.includes(req.user.profileID)) {
         return res.status(400).json(new ApiError(400, "User is not a part of this chat"));
     }
 
