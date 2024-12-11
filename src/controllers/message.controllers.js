@@ -51,6 +51,8 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
         id: message._id,
         text: message.msg_text,
         sender: message.msg_sender_amorr_id.username,
+        reply: message.msg_reply_status,
+        reply_mss: message.msg_reply_hash,
         timestamp: message.msg_timestamp,
         mediaUrl: message.msg_mediaUrl,
     }));
