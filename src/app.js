@@ -11,7 +11,7 @@ import userPreferenceRouter from "./routers/userPreference.routers.js";
 import gameRouter from "./routers/game.routers.js";
 import pointsRouter from "./routers/points.routers.js";
 import swipeRouter from './routers/swipe.routers.js';
-import mediaRouter from "./routers/media.router.js";  // Import the media router
+import mediaRouter from "./routers/media.router.js";
 import { createServer } from "http";
 import { setupSocketIO } from "./socket/socket.js";
 
