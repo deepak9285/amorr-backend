@@ -12,6 +12,10 @@ async function loadUSEModel() {
 }
 loadUSEModel();
 
+// async function getEmbedding(model, text) {
+//     const embeddings = await model.embed([text]);
+//     return embeddings.arraySync()[0];
+// }
 async function getEmbedding(model, text) {
     try {
         if (typeof text !== "string") {
@@ -117,6 +121,11 @@ async function calculateProfileSimilarity(profile1, profile2) {
         0.1 * completenessScore +
         0.1 * languageScore +
         0.2 * introScore;
+
+    // Scale raw score to the desired range (e.g., 80–100)
+    const finalScore = Math.min(100, Math.max(0, 80 + rawScore * 20));
+
+    console.log("Final similarity score:", finalScore);
 
     // Scale raw score to the desired range (e.g., 80–100)
     const finalScore = Math.min(100, Math.max(0, 80 + rawScore * 20));
