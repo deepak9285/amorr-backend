@@ -9,7 +9,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { emitSocketEvent } from "../socket/socket.js";
 import { sendNotification, MessageEventTypes } from "../utils/notification.js";
 import generateHash from "../utils/generateHash.js";
-import fs from "fs";
 
 const getStaticFilePath = (req, fileName) => {
     return `${req.protocol}://${req.get("host")}/images/${fileName}`;
@@ -49,10 +48,11 @@ const getAllMessagesofChat = asyncHandler(async (req, res) => {
 
     const textMessages = messages.map(message => ({
         id: message._id,
-        text: message.msg_text,
+        msg_text: message.msg_text,
         sender: message.msg_sender_amorr_id.username,
-        reply: message.msg_reply_status,
+        msg_reply_status: message.msg_reply_status,
         reply_mss: message.msg_reply_hash,
+        msg_reply_text:message.msg_reply_text,
         timestamp: message.msg_timestamp,
         mediaUrl: message.msg_mediaUrl,
     }));
