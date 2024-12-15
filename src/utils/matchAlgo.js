@@ -125,12 +125,7 @@ async function calculateProfileSimilarity(profile1, profile2) {
     // Scale raw score to the desired range (e.g., 80–100)
     const finalScore = Math.min(100, Math.max(0, 80 + rawScore * 20));
 
-    console.log("Final similarity score:", finalScore);
-
-    // Scale raw score to the desired range (e.g., 80–100)
-    const finalScore = Math.min(100, Math.max(0, 80 + rawScore * 20));
-
-    console.log("Final similarity score:", finalScore);
+    console.log("Final similarity score:", finalScore);e
 
     return finalScore;
 }

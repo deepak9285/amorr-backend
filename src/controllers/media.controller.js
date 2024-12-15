@@ -17,6 +17,7 @@ const uploadImage = async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
         const { amorrID } = req.body;
+        console.log(req.file);
 
         const fileUp = await handleFileUpload(req.file, amorrID);
 
