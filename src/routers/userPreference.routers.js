@@ -9,8 +9,8 @@ import {
 const router = Router(); 
 
 router.route('/').post(createUserPreference);
-router.route('/:id').get(getUserPreference);
-router.route('/:id').put(updateUserPreference);
+router.route('/get').post(getUserPreference);
+router.route('/update').post(updateUserPreference);
 router.route('/:id').delete(deleteUserPreference);
 
 export default router;

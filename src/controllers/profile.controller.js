@@ -76,7 +76,27 @@ const updateProfile = async (req, res) => {
       { $set: updateData },
       { new: true }
     );
-    
+
+    const updatedPref = await UserPreferences.findOneAndUpdate(
+      { userID: userID },
+      {
+        $set: {
+          specInterests: specInterests || profile.specInterests,
+          interests: interests || profile.interests,
+          promptsAnswers: promptsAnswers || profile.promptsAnswers,
+          preferredGender: lookingFor || profile.lookingFor,
+          ageRange: dob ? {
+            min: new Date(dob).getFullYear() - 2,
+            max: new Date(dob).getFullYear() + 2,
+          } : {
+            min: new Date(profile.dob).getFullYear() - 2,
+            max: new Date(profile.dob).getFullYear() + 2,
+          },
+        },
+      },
+      { new: true }
+    );
+
     if (!updatedProfile) {
       return res.json(
         new ApiResponse(500, null, 'Unable to update profile due to unexpected error.')
@@ -174,76 +194,102 @@ const calculateProfileCompleteness = async (req, res) => {
 const fetch_by_preferences = async (req, res) => {
   try {
     const { userID } = req.body;
-    console.log("api", userID)
-    if (!userID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
+    if (!userID) return res.json(new ApiResponse(400, null, 'User ID not provided.'));
 
+    // Fetch user preferences
     const userPreferences = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) });
-    console.log('User found:', userPreferences);
-    if (!userPreferences) return res.json(new ApiResponse(404, null, 'User not found.'));
+    if (!userPreferences) return res.json(new ApiResponse(404, null, 'User preferences not found.'));
 
-    console.log('User found1:', userPreferences);
-
-    // Calculate date range based on preferred age range
+    // Calculate date range based on age preference
     const today = new Date();
     const minAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.max));
     const maxAgeDate = new Date(today.setFullYear(today.getFullYear() - userPreferences.ageRange.min));
 
-    const result = await Profile.find({
-      "$or": [
-        { gender: { $regex: userPreferences.preferredGender, $options: 'i' } },
-        // { location: { $regex: userPreferences.location, $options: 'i' } },
-        {
-          dob: {
-            $gte: minAgeDate,
-            $lte: maxAgeDate
-          }
-        },
-        { relationshipPreference: { $regex: userPreferences.relationshipPreference, $options: 'i' } }
-      ]
-    }).populate('userID');
+    // Build query conditions
+    const mandatoryConditions = [
+      { gender: { $regex: userPreferences.preferredGender, $options: 'i' } }, // Match gender
+    ];
+    const optionalConditions = [];
 
-    console.log('Matching users found:', result);
+    // Include age range as mandatory unless `exceedAge` is true
+    if (userPreferences.exceedAge) {
+      mandatoryConditions.push({
+        dob: {
+          $gte: minAgeDate,
+          $lte: maxAgeDate
+        }
+      });
+    } else{
+      optionalConditions.push({
+        dob: {
+          $gte: minAgeDate,
+          $lte: maxAgeDate
+        }
+      });
+    }
 
-    if (!result || result.length === 0) return res.json(new ApiResponse(404, null, 'No user found.'));
+    // Match relationship preference
+    if (userPreferences.relationshipPreference) {
+      optionalConditions.push({ relationshipPreference: { $regex: userPreferences.relationshipPreference, $options: 'i' } });
+    }
 
-    const scoredMatches = await Promise.all( 
-      result.map(async match => {
+    // Match language preference
+    if (userPreferences.language) {
+      optionalConditions.push({ language: { $regex: userPreferences.language, $options: 'i' } });
+    }
+    
+    // Combine query with `$and` and `$or`
+    const query = {
+      "$and": mandatoryConditions,
+      ...(optionalConditions.length > 0 && { "$or": optionalConditions }),
+    };
+
+    // Fetch profiles
+    const result = await Profile.find(query).populate('userID');
+
+    if (!result || result.length === 0) {
+      return res.json(new ApiResponse(404, null, 'No matching profiles found.'));
+    }
+
+    // Calculate similarity scores for matches
+    const scoredMatches = await Promise.all(
+      result.map(async (match) => {
         try {
           const score = await calculateProfileSimilarity(userPreferences, match);
-          return { match: match, score };
+          return { match, score };
         } catch (error) {
           console.error('Error calculating similarity:', error);
-          return null; // Skip this match if there's an error
+          return null;
         }
       })
     );
 
-    // Filter out any null results caused by errors in calculateProfileSimilarity
-    const validMatches = scoredMatches.filter(item => item !== null);
-
-    // Sort by score in descending order
+    // Filter out null results and sort by score
+    const validMatches = scoredMatches.filter((item) => item !== null);
     validMatches.sort((a, b) => b.score - a.score);
 
-    // Save scores in the user's profile
+    // Save matched profiles to user's profile
     const userProfile = await Profile.findOne({ userID: userID });
     if (!userProfile) {
       return res.json(new ApiResponse(404, null, 'User profile not found.'));
     }
-
     userProfile.preferredProfiles = validMatches;
     await userProfile.save();
 
-    // Return both match and score in the response
-    if (!validMatches || validMatches.length === 0) {
-      return res.json(new ApiResponse(404, null, 'No user found.'));
-    }
-
-    return res.json(new ApiResponse(200, userProfile.preferredProfiles, 'Preference match users fetched successfully'));
+    return res.json(new ApiResponse(200, userProfile.preferredProfiles, 'Matching profiles fetched successfully.'));
   } catch (err) {
     console.error('Error in fetch_by_preferences:', err);
     return handleErr(res, err);
   }
 };
+
+
+
+
+
+
+
+/******  a331bc30-37a5-4c15-b4d5-90114f772be4  *******/
 
 // const fetch_by_preferences = async (req, res) => {
 //   try {
@@ -392,7 +438,7 @@ const fetch_by_id = async (req, res) => {
   try {
     const { profileID } = req.body;
     if (!profileID) return res.json(new ApiResponse(400, null, 'User id not provided.'));
-    const profile = await Profile.findById({ _id : new mongoose.Types.ObjectId(profileID) });
+    const profile = await Profile.findById(profileID);
     if (!profile) return res.json(new ApiResponse(404, null, 'profile not found.'));
     return res.json(new ApiResponse(200, profile, 'profile fetched successfully.'));
   }
