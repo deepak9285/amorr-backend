@@ -115,7 +115,6 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json(new ApiResponse(404, null, "User not found!"));
-      return res.json(new ApiResponse(404, null, "User not found!"));
     }
 
     // Case 1: Login using Password
@@ -304,39 +303,6 @@ const sendForgetPasswordMail = async (req, res) => {
   }
 }
 
-// const forgetPassword = async (req, res) => {
-//   try {
-
-//     const { password, newPassword } = req.body;
-
-//     const { token } = req.params;
-
-//     const user = await User.findOne({ resetPasswordToken: token });
-
-//     if (!user) return res.json(new ApiResponse(401, null, 'Unauthorized! Invalid Token!'));
-
-//     if (user.resetPasswordExpires < Date.now()) {
-//       return res.json(new ApiResponse(403, null, 'Token expired.'));
-//     }
-
-
-
-//     const passwordCheck = await bcrypt.compare(user.password, password);
-
-//     if (!passwordCheck) return res.json(new ApiResponse(401, null, 'invalid password'));
-
-//     const newHashedPassword = await bcrypt.hash(newPassword, 12);
-
-//     const updatedUser = await User.findByIdAndUpdate(userID, { $set: { password: newHashedPassword } });
-
-//     return res.json(new ApiResponse(200, updatedUser, 'Password changed successfully.'));
-
-//   }
-//   catch (err) {
-//     return handleErr(res, err);
-//   }
-// }
-
 const forgetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -345,6 +311,11 @@ const forgetPassword = async (req, res) => {
       return res.json(new ApiResponse(400, null, "All fields are required (email, OTP, newPassword)."));
     }
 
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json(new ApiResponse(404, null, "User not found."));
+    }
+    
     const otpEntry = await Otp.findOne({ email });
     if (!otpEntry) {
       return res.json(new ApiResponse(404, null, "OTP not found or expired."));
@@ -360,10 +331,6 @@ const forgetPassword = async (req, res) => {
       return res.json(new ApiResponse(401, null, "Invalid OTP."));
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.json(new ApiResponse(404, null, "User not found."));
-    }
 
     const newHashedPassword = await bcrypt.hash(newPassword, 12);
 
