@@ -40,8 +40,17 @@ const ProfileSchema = new mongoose.Schema(
       }
     ],
     location: {
-      latitude: { type: String, required: false, min: -90, max: 90 },
-      longitude: { type: String, required: false, min: -180, max: 180 },
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: false,
+      },
+      coordinates: {
+        type: [Number],
+        required: false,
+        min: -180,
+        max: 180,
+      },
     },
     city: { type: String, default: "" },
     nativePlace: { type: String },
@@ -59,7 +68,7 @@ const ProfileSchema = new mongoose.Schema(
         "Short Term Relationship",
         "Friendship & Connection",
         "Situationship",
-        "Something casual",
+        "Something Casual",
       ],
     },
     likes: [
@@ -125,5 +134,6 @@ const ProfileSchema = new mongoose.Schema(
   }
 );
 
+ProfileSchema.index({ location: '2dsphere' });
 const Profile = mongoose.model("Profile", ProfileSchema);
 export { Profile };

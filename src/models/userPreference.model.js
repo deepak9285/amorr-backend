@@ -19,7 +19,7 @@ const UserPreferencesSchema = new mongoose.Schema(
         "Short Term Relationship",
         "Friendship & Connection",
         "Situationship",
-        "Something casual",
+        "Something Casual",
       ],
       required: true
     },

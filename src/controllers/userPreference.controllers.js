@@ -20,7 +20,7 @@ const createUserPreference = asyncHandler(async (req, res) => {
 
 const getUserPreference = asyncHandler(async (req, res) => {
     const { userID } = req.body;
-    const userPreference = await UserPreferences.findOne({ userID: userID })
+    const userPreference = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) })
         .populate({
             path: 'userID',
             select: 'username email profileID isAadharVerified',
@@ -30,7 +30,6 @@ const getUserPreference = asyncHandler(async (req, res) => {
     if (!userPreference) {
         return res.status(404).json({ error: 'User preference not found' });
     }
-    console.log(userPreference)
 
     // return res.status(200).json(userPreference);
     return res.json(
