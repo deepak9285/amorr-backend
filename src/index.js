@@ -9,6 +9,7 @@ connectDB()
     .then(() => {
         httpServer.listen(PORT || 8000, (err) => {
             if (!err) {
+                
                 console.log(`Server is running on PORT : ${PORT}`);
             }
         });
