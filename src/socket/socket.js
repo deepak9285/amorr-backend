@@ -11,7 +11,7 @@ const setupSocketIO = (httpServer) => {
     const io = new Server(httpServer, {
         pingTimeout: 60000,
         cors: {
-            origin: ["http://192.168.1.41:5500"],
+            origin: ["http://192.168.1.41:5500","*"],
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
             credentials: true,
         },
@@ -286,25 +286,42 @@ const setupSocketIO = (httpServer) => {
                 }
             });
 
-            socket.on("gameScoreUpdate", async ({ sessionId, senderId, senderScore, receiverScore }) => {
-                const session = await GameSession.findOne({ sessionId });
-
-                if (session && session.status === "accepted") {
-                    session.senderScore = senderScore;
-                    session.receiverScore = receiverScore;
+            socket.on("gameScoreUpdate", async ({ sessionId, userId, userScore }) => {
+                try {
+                    
+                    const session = await GameSession.findOne({ sessionId });
+                    if (!session) {
+                        console.error(`Session ${sessionId} not found`);
+                        return;
+                    }
+            
+                    
+                    if (session.status !== "accepted") {
+                        console.error(`Session ${sessionId} is not in accepted status`);
+                        return;
+                    }
+            
+                    
+                    if (session.sender === userId) {
+                        session.senderScore = userScore;
+                    } else if (session.receiver === userId) {
+                        session.receiverScore = userScore;
+                    } else {
+                        console.error(`User ${userId} is not part of the session ${sessionId}`);
+                        return;
+                    }
+            
+                    
                     await session.save();
-
-                    // Emit updated scores to both players
-                    io.to(session.sender).emit("scoreUpdated", {
+            
+                    
+                    io.to(sessionId).emit("scoreUpdated", {
                         sessionId: session.sessionId,
                         senderScore: session.senderScore,
                         receiverScore: session.receiverScore,
                     });
-                    io.to(session.receiver).emit("scoreUpdated", {
-                        sessionId: session.sessionId,
-                        senderScore: session.senderScore,
-                        receiverScore: session.receiverScore,
-                    });
+                } catch (error) {
+                    console.error("Error in gameScoreUpdate handler:", error);
                 }
             });
 
