@@ -23,6 +23,10 @@ const createGameSession = asyncHandler(async (req, res) => {
     if (!senderId || !receiverId) {
         return new ApiError(400, "Sender and Receiver IDs are required");
     }
+    if (!chatId) {
+        return new ApiError(400, "Chat ID is required");
+    }
+
     const newGameSession = new GameSession({
         sessionId: uuidv4(),
         sender: senderId,
@@ -66,7 +70,7 @@ const createGameSession = asyncHandler(async (req, res) => {
     }
 
     await newGameSession.save();
-    return res.status(201).json(new ApiResponse(201, newGameSession, "Game session created successfully"));
+    return res.status(201).json(new ApiResponse(201, newGameSession, receivedMessage,"Game session created successfully"));
 });
 
 export {
