@@ -44,6 +44,9 @@ const chatMessageSchema = new Schema(
         msg_reply_status: {
             type: Boolean,
         },
+        msg_task_status: {
+            type: Boolean,
+        },
         msg_reply_hash: {
             type: String,
         },
