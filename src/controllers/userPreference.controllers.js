@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import { UserPreferences } from '../models/userPreference.model.js';
+import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createUserPreference = asyncHandler(async (req, res) => {
@@ -17,37 +19,44 @@ const createUserPreference = asyncHandler(async (req, res) => {
 });
 
 const getUserPreference = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const userPreference = await UserPreferences.findOne({ userID: id })
+    const { userID } = req.body;
+    const userPreference = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID) })
         .populate({
             path: 'userID',
-            select: 'username email',
+            select: 'username email profileID isAadharVerified',
         })
-        .select('preferredGender ageRange relationshipPreference location');
+        .select('preferredGender ageRange relationshipPreference language distance specInterests exceeedDistance exceedAge verified');
 
     if (!userPreference) {
         return res.status(404).json({ error: 'User preference not found' });
     }
 
-    return res.status(200).json(userPreference);
+    // return res.status(200).json(userPreference);
+    return res.json(
+        new ApiResponse(200, userPreference, 'User Preference Fetched successfully')
+    );
 
 });
 
 const updateUserPreference = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { preferredGender, ageRange, relationshipPreference, location } = req.body;
+    const { userID, preferredGender, ageRange, relationshipPreference, location, distance, verified } = req.body;
+    console.log("req.body", req.body);
 
-    const updatedPreference = await UserPreferences.findByIdAndUpdate(
-        id,
-        { preferredGender, ageRange, relationshipPreference, location },
-        { new: true }
-    );
-
-    if (!updatedPreference) {
+    const updatedPref = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID._id) });
+    console.log("User preference found:", updatedPref);
+    if (!updatedPref) {
         return res.status(404).json({ error: 'User preference not found' });
     }
 
-    return res.status(200).json(updatedPreference);
+    const updatedPreference = await UserPreferences.findOneAndUpdate(
+        { userID: new mongoose.Types.ObjectId(userID._id) },
+        { $set: { preferredGender, ageRange, relationshipPreference, location, distance, verified } },
+        { new: true }
+    );
+
+    return res.json(
+        new ApiResponse(200, null, 'Unable to update profile due to unexpected error.')
+    );
 
 });
 

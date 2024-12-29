@@ -5,10 +5,11 @@ const { Schema } = mongoose;
 const UserPreferencesSchema = new mongoose.Schema(
   {
     userID: { type: Schema.Types.ObjectId, ref: 'User' },
+    verified: { type: Boolean, default: false },
     preferredGender: { type: String },
     ageRange: {
-      min: { type: Number },
-      max: { type: Number }
+      min: { type: Number, default: 18 },
+      max: { type: Number, default: 25 },
     },
     relationshipPreference: {
       type: String,
@@ -18,10 +19,21 @@ const UserPreferencesSchema = new mongoose.Schema(
         "Short Term Relationship",
         "Friendship & Connection",
         "Situationship",
-        "Something casual",
+        "Something Casual",
       ],
       required: true
     },
+    language: { type: String, default: "English", required: false },
+    distance: { type: Number, default: 10, required: false },
+    specInterests: [
+      {
+        code: String,
+        title: String,
+        answer: String,
+      },
+    ],
+    exceedDistance: { type: Boolean, default: false },
+    exceedAge: { type: Boolean, default: true },
     // location: {
     //   latitude: { type: Number, required: false, min: -90, max: 90 },
     //   longitude: { type: Number, required: false, min: -180, max: 180 },

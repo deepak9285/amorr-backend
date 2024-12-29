@@ -104,14 +104,14 @@ async function calculateProfileSimilarity(profile1, profile2) {
     const completenessScore =
         ((profile1.completeness || 0) + (profile2.completeness || 0)) / 2;
 
-    console.log({
-        interestsScore,
-        lifestyleScore,
-        introScore,
-        educationScore,
-        languageScore,
-        completenessScore,
-    });
+    // console.log({
+    //     interestsScore,
+    //     lifestyleScore,
+    //     introScore,
+    //     educationScore,
+    //     languageScore,
+    //     completenessScore,
+    // });
 
     // Calculate the weighted raw score
     const rawScore =
@@ -125,7 +125,7 @@ async function calculateProfileSimilarity(profile1, profile2) {
     // Scale raw score to the desired range (e.g., 80–100)
     const finalScore = Math.min(100, Math.max(0, 80 + rawScore * 20));
 
-    console.log("Final similarity score:", finalScore);e
+    console.log("Final similarity score:", finalScore);
 
     return finalScore;
 }
