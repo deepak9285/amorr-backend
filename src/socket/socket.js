@@ -11,7 +11,7 @@ const setupSocketIO = (httpServer) => {
     const io = new Server(httpServer, {
         pingTimeout: 60000,
         cors: {
-            origin: ["http://192.168.1.41:5500","*"],
+            origin: ["http://192.168.63.48:8005","*"],
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
             credentials: true,
         },
@@ -22,6 +22,7 @@ const setupSocketIO = (httpServer) => {
 
             socket.on("joinChat", ({ chatId }) => {
                 socket.join(chatId);
+                console.log("joined chat", chatId);
             });
 
             const userId = socket.handshake.query.userId;
@@ -32,7 +33,6 @@ const setupSocketIO = (httpServer) => {
                     lastActive: new Date()
                 });
                 console.log(`User ${userId} connected`);
-
                 io.emit("userStatusUpdate", { userId, isOnline: true });
             }
 
@@ -60,7 +60,6 @@ const setupSocketIO = (httpServer) => {
                     io.emit("userStatusUpdate", { userId, isOnline: false });
                 }
             });
-
             socket.on("typing", ({ chatId, userId, isTyping }) => {
                 socket.broadcast.to(chatId).emit("userTyping", {
                     userId,
@@ -184,8 +183,6 @@ const setupSocketIO = (httpServer) => {
                         chat.userBlocked = true;
                         chat.whoBlocked = blockedUserId;
                         await chat.save();
-
-                        // Notify other participants
                         socket.broadcast.to(chatId).emit("userBlocked", {
                             userId,
                             blockedUserId,
@@ -213,9 +210,7 @@ const setupSocketIO = (httpServer) => {
                     console.error(error);
                 }
             });
-
-            //Game Requests
-            socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
+          socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
                 userSocketMap.set(userId, socket.id);
                 const receiverSocketId = userSocketMap.get(receiverId);
 

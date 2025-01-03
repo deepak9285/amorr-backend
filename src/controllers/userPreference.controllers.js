@@ -39,17 +39,18 @@ const getUserPreference = asyncHandler(async (req, res) => {
 });
 
 const updateUserPreference = asyncHandler(async (req, res) => {
-    const { userID, preferredGender, ageRange, relationshipPreference, location, distance, verified } = req.body;
+    const { id, preferredGender, ageRange, relationshipPreference, location, distance, verified } = req.body;
     console.log("req.body", req.body);
+   
 
-    const updatedPref = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(userID._id) });
+    const updatedPref = await UserPreferences.findOne({ userID: new mongoose.Types.ObjectId(id) });
     console.log("User preference found:", updatedPref);
     if (!updatedPref) {
         return res.status(404).json({ error: 'User preference not found' });
     }
 
     const updatedPreference = await UserPreferences.findOneAndUpdate(
-        { userID: new mongoose.Types.ObjectId(userID._id) },
+        { userID: new mongoose.Types.ObjectId(id) },
         { $set: { preferredGender, ageRange, relationshipPreference, location, distance, verified } },
         { new: true }
     );

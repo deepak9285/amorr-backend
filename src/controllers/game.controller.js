@@ -4,6 +4,7 @@ import { Chat } from "../models/chat.model.js";
 import { ChatMessage } from "../models/message.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { ApiError } from "../utils/apiError.js";
+import  generateHash  from "../utils/generateHash.js";
 import { v4 as uuidv4 } from "uuid";
 
 const getGameSession = asyncHandler(async (req, res) => {
@@ -17,9 +18,10 @@ const getGameSession = asyncHandler(async (req, res) => {
     }
     return res.status(200).json(new ApiResponse(200, gameSession, "Game session fetched successfully"));
 });
-
 const createGameSession = asyncHandler(async (req, res) => {
     const { senderId, receiverId, chatId } = req.body;
+    console.log("atart");
+    console.log(senderId, receiverId, chatId);
     if (!senderId || !receiverId) {
         return new ApiError(400, "Sender and Receiver IDs are required");
     }
@@ -36,7 +38,6 @@ const createGameSession = asyncHandler(async (req, res) => {
     });
 
     const msgId = await generateHash(`${chatId}-${senderId}-${Date.now()}`) || new mongoose.Types.ObjectId().toString();
-
     const message = await ChatMessage.create({
         msg_hash: msgId,
         msg_conversation_hash: chatId,
@@ -46,7 +47,7 @@ const createGameSession = asyncHandler(async (req, res) => {
         msg_updated_time: Date.now(),
         msg_sent_status: true,
         msg_deleted_status: false,
-        msg_text: content || "",
+        msg_text: "game session requested" || "",
         msg_reply_status: false,
         msg_task_status: true
     });
