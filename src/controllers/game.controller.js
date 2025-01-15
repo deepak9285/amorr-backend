@@ -3,8 +3,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Chat } from "../models/chat.model.js";
 import { ChatMessage } from "../models/message.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import generateHash from "../utils/generateHash.js";
 import { ApiError } from "../utils/apiError.js";
-import  generateHash  from "../utils/generateHash.js";
+//import  generateHash  from "../utils/generateHash.js";
 import { v4 as uuidv4 } from "uuid";
 
 const getGameSession = asyncHandler(async (req, res) => {
@@ -28,7 +29,6 @@ const createGameSession = asyncHandler(async (req, res) => {
     if (!chatId) {
         return new ApiError(400, "Chat ID is required");
     }
-
     const newGameSession = new GameSession({
         sessionId: uuidv4(),
         sender: senderId,
@@ -47,7 +47,7 @@ const createGameSession = asyncHandler(async (req, res) => {
         msg_updated_time: Date.now(),
         msg_sent_status: true,
         msg_deleted_status: false,
-        msg_text: "game session requested" || "",
+        msg_text: "Game session request",
         msg_reply_status: false,
         msg_task_status: true
     });

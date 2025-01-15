@@ -141,25 +141,20 @@ const loginUser = async (req, res) => {
         .cookie("refreshToken", refreshToken, options)
         .json(new ApiResponse(200, loggedInUser, "User logged in successfully with password"));
     }
-
-    // Case 2: Login using OTP
     if (otp) {
       const storedOtp = await Otp.findOne({ email });
       if (!storedOtp) {
         return res.status(404).json(new ApiResponse(404, null, "OTP not found or expired."));
       }
-
-      // Check if OTP has expired (10 minutes expiration)
       if (storedOtp.createdAt < Date.now() - 600000) {
         await Otp.deleteOne({ email }); // Clean up expired OTP
         return res.status(422).json(new ApiResponse(422, null, "OTP has expired. Please request a new one."));
       }
 
-    const isPasswordValid = await user.isPasswordCorrect(password);
-    if (!isPasswordValid) {
-      return res.json(new ApiResponse(401, null, "Password incorrect!"));
-    }
-
+    // const isPasswordValid = await user.isPasswordCorrect(password);
+    // if (!isPasswordValid) {
+    //   return res.json(new ApiResponse(401, null, "Password incorrect!"));
+    // }
       const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
     const options = {

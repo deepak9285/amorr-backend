@@ -17,6 +17,10 @@ const chatMessageSchema = new Schema(
             ref: 'User',
             required: true
         },
+        msg_sender_profileId:{
+            type:String,
+            ref:'Profile',
+        },
         msg_timestamp: {
             type: Date,
             required: true,

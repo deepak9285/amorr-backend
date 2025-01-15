@@ -5,11 +5,7 @@ import { UserPreferences } from "../models/userPreference.model.js";
 import { handleErr } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { calculateProfileSimilarity } from "../utils/matchAlgo.js";
-// const tf = require('@tensorflow/tfjs');
-// const use = require('@tensorflow-models/universal-sentence-encoder');
 import { Match } from "../models/Match.model.js";
-// import haversine from 'haversine-distance';
-
 
 const updateProfile = async (req, res) => {
   try {
@@ -33,11 +29,6 @@ const updateProfile = async (req, res) => {
     } = req.body;
 
     console.log('Request body:', req.body);
-
-    // if (!mongoose.Types.ObjectId.isValid(userID)) {
-    //   return res.json(new ApiResponse(400, null, 'Invalid userID.'));
-    // }
-
     const user = await User.findById(new mongoose.Types.ObjectId(userID));
     if (!user) return res.json(new ApiResponse(404, null, 'User not found.'));
 
@@ -127,11 +118,12 @@ const like_profile = async (req, res) => {
 
     const profile = await Profile.findById(profileID);
     const user = await User.findById(userID);
+    // console.log('pro',profile,'user',user);
 
     if (!user || !profile) return res.json(new ApiResponse(404, null, 'Data not found.'));
-
-    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $push: { likes: { userID } } }, { new: true });
-
+    console.log('pro',profile,'user',user);
+    const updatedProfile = await Profile.findByIdAndUpdate(profileID, { $push: { likes:  userID  } }, { new: true });
+      console.log(updatedProfile,'updatedProfile');
     if (!updatedProfile) return res.json(new ApiResponse(500, 'unable to like the profile.'));
 
     return res.json(new ApiResponse(200, updatedProfile, 'profile liked'));

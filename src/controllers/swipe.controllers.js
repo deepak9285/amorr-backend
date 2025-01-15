@@ -45,7 +45,7 @@ import { ChatEventEnum } from "../socket/chatEvents.js";
 //                 existingMatchForUser.status = 'accepted';
 //                 existingMatchForTargetUser.status = 'accepted';
 //             }
-            
+
 //             if (existingMatchForTargetUser) {
 //                 console.log("existingMatchForTargetUser")
 //                 existingMatchForUser.status = 'accepted';
@@ -100,227 +100,274 @@ import { ChatEventEnum } from "../socket/chatEvents.js";
 // };
 
 const createOrGetAOneOnOneChat = asyncHandler(async (userId, receiverId) => {
-    if (!userId) {
-        return new ApiError(401, "User ID is required");
+  if (!userId) {
+    return new ApiError(401, "User ID is required");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return new ApiError(404, "User not found");
+  }
+
+  const receiver = await User.findById(receiverId);
+  if (!receiver) {
+    return new ApiError(404, "Receiver does not exist");
+  }
+
+  if (receiver._id.toString() === user._id.toString()) {
+    return new ApiError(400, "You cannot chat with yourself");
+  }
+
+  const existingChat = await Chat.findOne({
+    isGroup: false,
+    participants: { $all: [user._id, receiver._id] },
+  })
+    .populate("participants", "username profileID email")
+    .populate("lastMessage")
+    .populate("firstMessage");
+
+  if (existingChat) {
+    return existingChat;
+  }
+
+  const chatId = await generateHash(
+    user._id.toString() + receiver._id.toString()
+  );
+
+  const newChatInstance = new Chat({
+    chatId: chatId,
+    name: "One-on-One Chat",
+    participants: [user._id, receiver._id],
+    admin: user._id,
+  });
+
+  await newChatInstance.save();
+
+  const createdChat = await Chat.findById(newChatInstance._id)
+    .populate("participants", "username profileID email")
+    .populate("lastMessage")
+    .populate("firstMessage");
+
+  if (!createdChat) {
+    return new ApiError(500, "Internal server error");
+  }
+
+  createdChat.participants.forEach((participant) => {
+    if (participant._id.toString() !== user._id.toString()) {
+      emitSocketEvent(
+        null,
+        participant._id.toString(),
+        ChatEventEnum.NEW_CHAT_EVENT,
+        createdChat
+      );
     }
+  });
 
-    const user = await User.findById(userId);
-    if (!user) {
-        return new ApiError(404, "User not found");
-    }
-
-    const receiver = await User.findById(receiverId);
-    if (!receiver) {
-        return new ApiError(404, "Receiver does not exist");
-    }
-
-    if (receiver._id.toString() === user._id.toString()) {
-        return new ApiError(400, "You cannot chat with yourself");
-    }
-
-    const existingChat = await Chat.findOne({
-        isGroup: false,
-        participants: { $all: [user._id, receiver._id] },
-    })
-        .populate("participants", "username profileID email")
-        .populate("lastMessage")
-        .populate("firstMessage");
-
-    if (existingChat) {
-        return existingChat;
-    }
-
-    const chatId = await generateHash(user._id.toString() + receiver._id.toString());
-
-    const newChatInstance = new Chat({
-        chatId: chatId,
-        name: "One-on-One Chat",
-        participants: [user._id, receiver._id],
-        admin: user._id,
-    });
-
-    await newChatInstance.save();
-
-    const createdChat = await Chat.findById(newChatInstance._id)
-        .populate("participants", "username profileID email")
-        .populate("lastMessage")
-        .populate("firstMessage");
-
-    if (!createdChat) {
-        return new ApiError(500, "Internal server error");
-    }
-
-    createdChat.participants.forEach((participant) => {
-        if (participant._id.toString() !== user._id.toString()) {
-            emitSocketEvent(
-                null, 
-                participant._id.toString(),
-                ChatEventEnum.NEW_CHAT_EVENT,
-                createdChat
-            );
-        }
-    });
-
-    return createdChat;
+  return createdChat;
 });
 
-
 const swipe = async (req, res) => {
-    const { profileID, targetUserId, action } = req.body;
-    console.log(profileID,targetUserId,action);
+  const { profileID, targetUserId, action } = req.body;
+  console.log(profileID, targetUserId, action);
 
-    if (!profileID || !targetUserId || !['like', 'dislike'].includes(action)) {
-        return res.json(new ApiResponse(404, null, 'Invalid request'));
+  if (!profileID || !targetUserId || !["like", "dislike"].includes(action)) {
+    return res.json(new ApiResponse(404, null, "Invalid request"));
+  }
+  if (profileID === targetUserId) {
+    return res.json(new ApiResponse(400, null, "You cannot swipe on yourself"));
+  }
+
+  try {
+    const user = await Profile.findById(profileID);
+    const targetUser = await Profile.findById(targetUserId);
+
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, null, "User not found"));
     }
-    if (profileID === targetUserId) {
-        return res.json(new ApiResponse(400, null, 'You cannot swipe on yourself'));
+    if (!targetUser) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Target user not found"));
     }
 
-    try {
-        const user = await Profile.findById(profileID);
-        const targetUser = await Profile.findById(targetUserId);
+    // Check if a match already exists in both profiles
+    const userMatchIndex = user.matches.findIndex(
+      (match) =>
+        match.senderID.equals(targetUserId) &&
+        match.recieverID.equals(profileID)
+    );
+    const targetUserMatchIndex = targetUser.matches.findIndex(
+      (match) =>
+        match.recieverID.equals(profileID) &&
+        match.senderID.equals(targetUserId)
+    );
 
-        if (!user) {
-            return res.status(404).json(new ApiResponse(404, null, 'User not found'));
-        }
-        if (!targetUser) {
-            return res.status(404).json(new ApiResponse(404, null, 'Target user not found'));
-        }
+    if (userMatchIndex !== -1 && targetUserMatchIndex !== -1) {
+      // Update status to 'accepted' in both profiles
+      user.matches[userMatchIndex].status = "accepted";
+      targetUser.matches[targetUserMatchIndex].status = "accepted";
 
-        // Check if a match already exists in both profiles
-        const userMatchIndex = user.matches.findIndex(match => match.senderID.equals(targetUserId) && match.recieverID.equals(profileID));
-        const targetUserMatchIndex = targetUser.matches.findIndex(match => match.recieverID.equals(profileID) && match.senderID.equals(targetUserId));
+      const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
 
-        if (userMatchIndex !== -1 && targetUserMatchIndex !== -1) {
-            // Update status to 'accepted' in both profiles
-            user.matches[userMatchIndex].status = 'accepted';
-            targetUser.matches[targetUserMatchIndex].status = 'accepted';
+      user.markModified("matches");
+      targetUser.markModified("matches");
 
-            const chat = await createOrGetAOneOnOneChat(profileID, targetUserId);
+      await user.save();
+      await targetUser.save();
 
-            user.markModified('matches');
-            targetUser.markModified('matches');
+      return res.json(
+        new ApiResponse(
+          200,
+          { message: "matched", chat },
+          "Match accepted, chat created"
+        )
+      );
+    } else {
+      if (userMatchIndex === -1 || targetUserMatchIndex === -1) {
+        user.matches.push({
+          senderID: profileID,
+          recieverID: targetUserId,
+          status: "pending",
+        });
+        targetUser.matches.push({
+          senderID: profileID,
+          recieverID: targetUserId,
+          status: "pending",
+        });
+      }
 
-            await user.save();
-            await targetUser.save();
+      user.markModified("matches");
+      targetUser.markModified("matches");
 
-            return res.json(new ApiResponse(200, { message: "matched", chat }, 'Match accepted, chat created'));
-        } else {
-            if (userMatchIndex === -1 || targetUserMatchIndex === -1) {
-                user.matches.push({
-                    senderID: profileID,
-                    recieverID: targetUserId,
-                    status: 'pending',
-                });
-                targetUser.matches.push({
-                    senderID: profileID,
-                    recieverID: targetUserId,
-                    status: 'pending',
-                });
-            }
+      await user.save();
+      await targetUser.save();
 
-            user.markModified('matches');
-            targetUser.markModified('matches');
+      // Record the action (like or dislike) for the swipe in the initiating user's profile
+      if (action === "like" && !user.likes.includes(targetUserId)) {
+        user.likes.push(targetUserId);
+      } else if (
+        action === "dislike" &&
+        !user.dislikes.includes(targetUserId)
+      ) {
+        user.dislikes.push(targetUserId);
+      }
 
-            await user.save();
-            await targetUser.save();
+      user.markModified("likes");
+      user.markModified("dislikes");
+      await user.save();
 
-            // Record the action (like or dislike) for the swipe in the initiating user's profile
-            if (action === 'like' && !user.likes.includes(targetUserId)) {
-                user.likes.push(targetUserId);
-            } else if (action === 'dislike' && !user.dislikes.includes(targetUserId)) {
-                user.dislikes.push(targetUserId);
-            }
+      const chat = await createOrGetAOneOnOneChat(
+        user.userID,
+        targetUser.userID
+      );
 
-            user.markModified('likes');
-            user.markModified('dislikes');
-            await user.save();
-
-            const chat = await createOrGetAOneOnOneChat(user.userID, targetUser.userID);
-
-            return res.json(new ApiResponse(200, user, "Chats",chat,'Swipe recorded, match requests created with pending status.'));
-        }
-    } catch (error) {
-        console.error("Error in swipe API:", error);
-        return res.json(new ApiResponse(500, error.message || error, 'Server error'));
+      return res.json(
+        new ApiResponse(
+          200,
+          user,
+          "Chats",
+          chat,
+          "Swipe recorded, match requests created with pending status."
+        )
+      );
     }
+  } catch (error) {
+    console.error("Error in swipe API:", error);
+    return res.json(
+      new ApiResponse(500, error.message || error, "Server error")
+    );
+  }
 };
-
 
 const getMatchesByStatus = async (req, res) => {
-    const { profileId, status } = req.body;
+  const { profileId, status } = req.body;
+  console.log(profileId, status);
 
-    if (!['accepted', 'pending', 'rejected'].includes(status)) {
-        return res.status(400).json(new ApiResponse(400, null, 'Invalid status'));
+  if (!["accepted", "pending", "rejected"].includes(status)) {
+    return res.status(400).json(new ApiResponse(400, null, "Invalid status"));
+  }
+
+  try {
+    const user = await Profile.findById(profileId);
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, null, "User not found"));
     }
-
-    try {
-        const user = await Profile.findById(profileId);
-         console.log(user);
-        if (!user) {
-            return res.status(404).json(new ApiResponse(404, null, 'User not found'));
-        }
-
-        let matches = user.matches.filter(match => match.status === status);
-
-        // Filter pending matches where the user is the receiver
-        if (status === 'pending') {
-            matches = matches.filter(match => match.recieverID.toString() === profileId);
-        }
-        console.log(matches);
-
-        return res.status(200).json(new ApiResponse(200, matches, 'Matches fetched successfully'));
-    } catch (error) {
-        console.error("Error in getMatchesByStatus:", error);
-        return res.status(500).json(new ApiResponse(500, error.message || error, 'Server error'));
-    }
+    let matches = user.matches.filter((match) => match.status === status);
+    console.log(matches);
+    // let recievedMatches = matches.filter(
+    //   (match) => match.recieverID === new mongoose.Types.ObjectId(profileId)
+    // );
+    // if (status === "pending") {
+    // }
+    
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, matches, "Matches fetched successfully")
+      );
+  } catch (error) {
+    console.error("Error in getMatchesByStatus:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, error.message || error, "Server error"));
+  }
 };
-
-
 
 const updateMatchStatus = async (req, res) => {
-    const { profileId, targetUserId, newStatus } = req.body;
+  const { profileId, targetUserId, newStatus } = req.body;
 
-    if (!['accepted', 'pending', 'rejected'].includes(newStatus)) {
-        return res.status(400).json(new ApiResponse(400, null, 'Invalid status'));
+  if (!["accepted", "pending", "rejected"].includes(newStatus)) {
+    return res.status(400).json(new ApiResponse(400, null, "Invalid status"));
+  }
+
+  try {
+    const user = await Profile.findById(profileId);
+    const targetUser = await Profile.findById(targetUserId);
+
+    if (!user || !targetUser) {
+      return res.status(404).json({ message: "User or target user not found" });
+      
+    }
+    console.log(profileId ," ", targetUserId);
+    console.log(user.matches);
+    const userMatch = user.matches.find(
+      (match) =>
+        match.senderID.equals(profileId) &&
+        match.recieverID.equals(targetUserId)
+    );
+
+    if (userMatch) {
+      userMatch.status = newStatus;
+      await user.save();
+    } else {
+      return res.status(404).json({ message: "Match not found for user" });
+    }
+    console.log("targetUser",targetUser.matches);
+
+    const targetUserMatch = targetUser.matches.find(
+      (match) =>
+        match.senderID.equals(profileId) &&
+        match.recieverID.equals(targetUserId)
+    );
+
+    if (targetUserMatch) {
+      targetUserMatch.status = newStatus;
+      await targetUser.save();
+    } else {
+      return res
+        .status(404)
+        .json({ message: "Match not found for target user" });
     }
 
-    try {
-        const user = await Profile.findById(profileId);
-        const targetUser = await Profile.findById(targetUserId);
-
-        if (!user || !targetUser) {
-            return res.status(404).json({ message: 'User or target user not found' });
-        }
-
-        const userMatch = user.matches.find(
-            match => match.senderID.equals(profileId) && match.recieverID.equals(targetUserId)
-        );
-
-        if (userMatch) {
-            userMatch.status = newStatus;
-            await user.save();
-        } else {
-            return res.status(404).json({ message: 'Match not found for user' });
-        }
-
-        const targetUserMatch = targetUser.matches.find(
-            match => match.senderID.equals(targetUserId) && match.recieverID.equals(profileId)
-        );
-
-        if (targetUserMatch) {
-            targetUserMatch.status = newStatus;
-            await targetUser.save();
-        } else {
-            return res.status(404).json({ message: 'Match not found for target user' });
-        }
-
-        return res.json(new ApiResponse(200, null, `Match status updated to ${newStatus}`));
-    } catch (error) {
-        console.error('Server error:', error);
-        return res.status(500).json(new ApiResponse(500, error.message, 'Server error'));
-    }
+    return res.json(
+      new ApiResponse(200, null, `Match status updated to ${newStatus}`)
+    );
+  } catch (error) {
+    console.error("Server error:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, error.message, "Server error"));
+  }
 };
-
 
 export { swipe, updateMatchStatus, getMatchesByStatus };

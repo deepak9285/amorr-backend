@@ -11,13 +11,14 @@ const setupSocketIO = (httpServer) => {
     const io = new Server(httpServer, {
         pingTimeout: 60000,
         cors: {
-            origin: ["http://192.168.63.48:8005","*"],
+            origin: ["http://192.168.220.48:8005","*"],
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
             credentials: true,
         },
     });
 
     io.on("connection", async (socket) => {
+        console.log(`debugger line 21 : a new socket connection is estabilished by ${socket.id}`)
         try {
 
             socket.on("joinChat", ({ chatId }) => {
@@ -26,6 +27,7 @@ const setupSocketIO = (httpServer) => {
             });
 
             const userId = socket.handshake.query.userId;
+            console.log("userID",userId);
 
             if (userId) {
                 await User.findByIdAndUpdate(userId, {
@@ -136,7 +138,6 @@ const setupSocketIO = (httpServer) => {
                     console.error("Error marking message as seen:", error);
                 }
             });
-
             socket.on("deleteMessage", async ({ msg_hash, userId, deleteForEveryone }) => {
                 try {
                     const message = await ChatMessage.findOne({ msg_hash });
@@ -210,7 +211,10 @@ const setupSocketIO = (httpServer) => {
                     console.error(error);
                 }
             });
-          socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
+
+            //Game Requests
+            socket.on("gameChallengeRequest", async ({ senderId, receiverId }) => {
+                console.log(`debugger line 221 : "gameChallengeRequest" hit by ${socket.id}`)
                 userSocketMap.set(userId, socket.id);
                 const receiverSocketId = userSocketMap.get(receiverId);
 
@@ -259,7 +263,7 @@ const setupSocketIO = (httpServer) => {
 
             socket.on("gameChallengeAccept", async ({ sessionId, receiverId }) => {
                 const session = await GameSession.findOne({ sessionId, receiver: receiverId });
-
+                console.log(`debugger line 270 : "gameChallengeAccept" hit by ${socket.id}`)
                 if (session && session.status === "requested") {
                     session.acceptanceTime = new Date();
                     session.status = "accepted";
@@ -282,6 +286,7 @@ const setupSocketIO = (httpServer) => {
             });
 
             socket.on("gameScoreUpdate", async ({ sessionId, userId, userScore }) => {
+                console.log(`debugger line 293 : "gameScoreUpdate" hit by ${socket.id}`)
                 try {
                     
                     const session = await GameSession.findOne({ sessionId });
@@ -322,7 +327,7 @@ const setupSocketIO = (httpServer) => {
 
             socket.on("endGame", async ({ sessionId, senderScore, receiverScore }) => {
                 const session = await GameSession.findOne({ sessionId });
-
+                console.log(`debugger line 334 : "endGame" hit by ${socket.id}`)
                 if (session && session.status === "accepted") {
                     session.endTime = new Date();
                     session.senderScore = senderScore;
