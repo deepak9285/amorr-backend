@@ -82,10 +82,16 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import uploadImage from "../controllers/media.controller.js";
+import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __filename=fileURLToPath(import.meta.url);
+
+//const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __dirname=path.dirname(__filename)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        const uploadPath = path.join(__dirname, "..", "uploads");
+        console.log("Upload Path:", uploadPath);  
         cb(null, path.join(__dirname, "../uploads"));
     },
     filename: (req, file, cb) => {

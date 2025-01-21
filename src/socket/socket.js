@@ -11,7 +11,7 @@ const setupSocketIO = (httpServer) => {
     const io = new Server(httpServer, {
         pingTimeout: 60000,
         cors: {
-            origin: ["http://192.168.220.48:8005","*"],
+            origin: ["http://192.168.140.48:8005","*"],
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
             credentials: true,
         },
@@ -139,6 +139,7 @@ const setupSocketIO = (httpServer) => {
                 }
             });
             socket.on("deleteMessage", async ({ msg_hash, userId, deleteForEveryone }) => {
+                console.log("userId",userId);
                 try {
                     const message = await ChatMessage.findOne({ msg_hash });
 
@@ -150,6 +151,7 @@ const setupSocketIO = (httpServer) => {
                                 msg_hash,
                                 deletedFor: "everyone",
                             });
+                            console.log("socket delelte successfully");
                         } else {
                             message.msg_deleted_status = true;
                             await message.save();
@@ -164,7 +166,6 @@ const setupSocketIO = (httpServer) => {
                     console.error("Error deleting message:", error);
                 }
             });
-
             socket.on("fetchConversation", async ({ chatId }, callback) => {
                 try {
                     const messages = await ChatMessage.find({ msg_conversation_hash: chatId })
@@ -237,8 +238,7 @@ const setupSocketIO = (httpServer) => {
             });
 
             if (userId) {
-                userSocketMap.set(userId, socket.id); // Map User ID to Socket ID
-
+                userSocketMap.set(userId, socket.id); 
                 // Handle disconnection and clean up mapping
                 socket.on("disconnect", () => {
                     userSocketMap.delete(userId);

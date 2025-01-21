@@ -12,6 +12,7 @@ const STORAGE_ZONE_NAME = 'amorr';
 const ACCESS_KEY = process.env.BUNNY_ACCESS_KEY;
 
 const uploadImage = async (req, res) => {
+    
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
