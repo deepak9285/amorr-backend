@@ -83,6 +83,7 @@ import multer from "multer";
 import path from "path";
 import uploadImage from "../controllers/media.controller.js";
 import { fileURLToPath } from "url";
+import fs from 'fs';
 
 const __filename=fileURLToPath(import.meta.url);
 
@@ -91,8 +92,11 @@ const __dirname=path.dirname(__filename)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(__dirname, "..", "uploads");
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
         console.log("Upload Path:", uploadPath);  
-        cb(null, path.join(__dirname, "../uploads"));
+        cb(null,uploadPath);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
