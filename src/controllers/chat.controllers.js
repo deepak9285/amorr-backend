@@ -145,7 +145,7 @@ const getUserStatus = asyncHandler(async (req, res) => {
 // });
 
 const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
-    const { userProfileID, receiverProfileID } = req.body; .
+    const { userProfileID, receiverProfileID } = req.body; 
     console.log(userProfileID,receiverProfileID);
     if (!userProfileID || !receiverProfileID) {
       return res
